@@ -1,0 +1,39 @@
+{
+  "name": "release-note-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@octokit/rest": "^15.15.1",
+    "node-fetch": "^2.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.7.0",
+    "prettier": "^1.14.3",
+    "serverless": "^1.32.0"
+  },
+  "engines": {
+    "node": "^8"
+  },
+  "eslintConfig": {
+    "env": {
+      "es6": true,
+      "node": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+      "ecmaVersion": 2018
+    }
+  },
+  "prettier": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tattoodo/release-note-bot"
+  },
+  "scripts": {
+    "build": "prettier --write *.js && yarn lint",
+    "deploy": "yarn build && serverless deploy",
+    "lint": "eslint *.js",
+    "logs": "serverless logs -f webhook -t"
+  }
+}
