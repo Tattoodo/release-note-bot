@@ -7,6 +7,9 @@ octokit.authenticate({
   token: process.env.GITHUB_API_TOKEN
 });
 
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+const escapeRegExp = string => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const isProcessable = ({ action, pull_request }) =>
   processableActions.includes(action) && isRelease(pull_request);
 
@@ -42,6 +45,20 @@ const getChangeLog = async ({ owner, repo, number }) => {
   return ["```", ...lines, "```"].join("\n");
 };
 
+const changesRe = /^```\r?\n(.*\r?\n)*```/;
+
+const mappingJsonFile = "src/config/elasticsearch/mapping.json";
+const mappingJsonNotice =
+  "**Notice:** mapping.json has change. Ensure production Elastic is updated!";
+const mappingJsonNoticeRe = new RegExp(
+  `^${escapeRegExp(mappingJsonNotice)}$`,
+  "m"
+);
+const hasMappingJsonChanged = async ({ owner, repo, number }) => {
+  const files = await octokit.pullRequests.getFiles({ owner, repo, number });
+  return files.data.some(({ filename }) => filename === mappingJsonFile);
+};
+
 const processPullRequest = async ({
   organization,
   repository,
@@ -51,9 +68,14 @@ const processPullRequest = async ({
   const owner = organization.login;
   const repo = repository.name;
   const changes = await getChangeLog({ owner, repo, number });
+  const showNotice = await hasMappingJsonChanged({ owner, repo, number });
   const body = [
     changes,
-    pull_request.body.replace(/^```\r?\n(.*\r?\n)*```/, "").trim()
+    showNotice && mappingJsonNotice,
+    pull_request.body
+      .replace(changesRe, "")
+      .replace(mappingJsonNoticeRe, "")
+      .trim()
   ]
     .filter(Boolean)
     .join("\n\n");
