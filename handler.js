@@ -7,6 +7,16 @@ octokit.authenticate({
   token: process.env.GITHUB_API_TOKEN
 });
 
+async function collect(request) {
+  const response = await request;
+  return octokit.hasNextPage(response)
+    ? [].concat(
+        ...response.data,
+        ...(await collect(octokit.getNextPage(response)))
+      )
+    : response.data;
+}
+
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 const escapeRegExp = string => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -18,7 +28,8 @@ const isRelease = ({ head, base }) =>
 
 const processableActions = ["opened", "reopened", "synchronize"];
 
-const re = /^Merge pull request #\d+ from Tattoodo\/ch(\d+)\//;
+const storyRe = /^Merge pull request #\d+ from Tattoodo\/ch(\d+)\//;
+const extractStoryId = message => (storyRe.exec(message) || [])[1];
 
 const storyUrl = id =>
   `https://api.clubhouse.io/api/v2/stories/${id}?token=${
@@ -28,17 +39,15 @@ const storyUrl = id =>
 const fetchStory = async id => fetch(storyUrl(id)).then(r => r.json());
 
 const getChangeLog = async ({ owner, repo, number }) => {
-  const commits = await octokit.pullRequests.getCommits({
-    owner,
-    repo,
-    number,
-    per_page: 100
-  });
-  const stories = commits.data
-    .map(c => (re.exec(c.commit.message) || [])[1])
+  const commits = await collect(
+    octokit.pullRequests.getCommits({ owner, repo, number })
+  );
+  const storyIds = [
+    ...new Set(commits.map(c => extractStoryId(c.commit.message)))
+  ]
     .filter(Boolean)
-    .map(Number);
-  const storyIds = [...new Set(stories)].sort((a, b) => a - b);
+    .map(Number)
+    .sort((a, b) => a - b);
   const lines = await Promise.all(
     storyIds.map(id => fetchStory(id).then(story => `[ch${id}] ${story.name}`))
   );
@@ -55,9 +64,17 @@ const mappingJsonNoticeRe = new RegExp(
   "m"
 );
 const hasMappingJsonChanged = async ({ owner, repo, number }) => {
-  const files = await octokit.pullRequests.getFiles({ owner, repo, number });
-  return files.data.some(({ filename }) => filename === mappingJsonFile);
+  const files = await collect(
+    octokit.pullRequests.getFiles({ owner, repo, number })
+  );
+  return files.some(({ filename }) => filename === mappingJsonFile);
 };
+
+const stripGeneratedContent = body =>
+  body
+    .replace(changesRe, "")
+    .replace(mappingJsonNoticeRe, "")
+    .trim();
 
 const processPullRequest = async ({
   organization,
@@ -72,10 +89,7 @@ const processPullRequest = async ({
   const body = [
     changes,
     showNotice && mappingJsonNotice,
-    pull_request.body
-      .replace(changesRe, "")
-      .replace(mappingJsonNoticeRe, "")
-      .trim()
+    stripGeneratedContent(pull_request.body)
   ]
     .filter(Boolean)
     .join("\n\n");
