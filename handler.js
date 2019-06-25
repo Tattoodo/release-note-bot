@@ -21,10 +21,14 @@ async function collect(request) {
 const escapeRegExp = string => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const isProcessable = ({ action, pull_request }) =>
-  processableActions.includes(action) && isRelease(pull_request);
+  processableActions.includes(action) &&
+  (isRelease(pull_request) || isStaging(pull_request));
 
 const isRelease = ({ head, base }) =>
   head.ref === "release" && base.ref === "master";
+
+const isStaging = ({ head, base }) =>
+  head.ref === "develop" && base.ref === "release";
 
 const processableActions = ["opened", "reopened", "synchronize"];
 
