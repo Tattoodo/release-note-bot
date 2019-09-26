@@ -60,9 +60,9 @@ const getChangeLog = async ({ owner, repo, number }) => {
 
 const changesRe = /^```\r?\n(.*\r?\n)*```/;
 
-const mappingJsonFile = "src/config/elasticsearch/mapping.json";
+const mappingJsonFile = /^src\/config\/elasticsearch\/mappings\/\w+.json$/;
 const mappingJsonNotice =
-  "**Notice:** mapping.json has change. Ensure production Elastic is updated!";
+  "**Notice:** Elastic mappings has change. Ensure production Elastic is updated!";
 const mappingJsonNoticeRe = new RegExp(
   `^${escapeRegExp(mappingJsonNotice)}$`,
   "m"
@@ -71,7 +71,7 @@ const hasMappingJsonChanged = async ({ owner, repo, number }) => {
   const files = await collect(
     octokit.pullRequests.getFiles({ owner, repo, number })
   );
-  return files.some(({ filename }) => filename === mappingJsonFile);
+  return files.some(({ filename }) => mappingJsonFile.test(filename));
 };
 
 const stripGeneratedContent = body =>
