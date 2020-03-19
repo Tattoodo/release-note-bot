@@ -36,9 +36,7 @@ const storyRe = /^Merge pull request #\d+ from Tattoodo\/ch(\d+)\//;
 const extractStoryId = message => (storyRe.exec(message) || [])[1];
 
 const storyUrl = id =>
-  `https://api.clubhouse.io/api/v2/stories/${id}?token=${
-    process.env.CLUBHOUSE_API_TOKEN
-  }`;
+  `https://api.clubhouse.io/api/v2/stories/${id}?token=${process.env.CLUBHOUSE_API_TOKEN}`;
 
 const fetchStory = async id => fetch(storyUrl(id)).then(r => r.json());
 
