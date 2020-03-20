@@ -58,6 +58,10 @@ provider:
 #    - exclude-me-dir/**
 
 functions:
+  ping:
+    handler: handler.ping
+    events:
+      - http: GET ping
   webhook:
     handler: handler.webhook
     events:

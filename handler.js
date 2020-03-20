@@ -1,21 +1,10 @@
 "use strict";
 const fetch = require("node-fetch");
-const octokit = require("@octokit/rest")();
+const { Octokit } = require("@octokit/rest");
 
-octokit.authenticate({
-  type: "token",
-  token: process.env.GITHUB_API_TOKEN
+const octokit = new Octokit({
+  auth: process.env.GITHUB_API_TOKEN
 });
-
-async function collect(request) {
-  const response = await request;
-  return octokit.hasNextPage(response)
-    ? [].concat(
-        ...response.data,
-        ...(await collect(octokit.getNextPage(response)))
-      )
-    : response.data;
-}
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 const escapeRegExp = string => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -40,9 +29,9 @@ const storyUrl = id =>
 
 const fetchStory = async id => fetch(storyUrl(id)).then(r => r.json());
 
-const getChangeLog = async ({ owner, repo, number }) => {
-  const commits = await collect(
-    octokit.pullRequests.getCommits({ owner, repo, number })
+const getChangeLog = async ({ owner, repo, pull_number }) => {
+  const commits = await octokit.paginate(
+    octokit.pulls.listCommits.endpoint({ owner, repo, pull_number })
   );
   const storyIds = [
     ...new Set(commits.map(c => extractStoryId(c.commit.message)))
@@ -65,9 +54,9 @@ const mappingJsonNoticeRe = new RegExp(
   `^${escapeRegExp(mappingJsonNotice)}$`,
   "m"
 );
-const hasMappingJsonChanged = async ({ owner, repo, number }) => {
-  const files = await collect(
-    octokit.pullRequests.getFiles({ owner, repo, number })
+const hasMappingJsonChanged = async ({ owner, repo, pull_number }) => {
+  const files = await octokit.paginate(
+    octokit.pulls.listFiles.endpoint({ owner, repo, pull_number })
   );
   return files.some(({ filename }) => mappingJsonFile.test(filename));
 };
@@ -86,8 +75,9 @@ const processPullRequest = async ({
 }) => {
   const owner = organization.login;
   const repo = repository.name;
-  const changes = await getChangeLog({ owner, repo, number });
-  const showNotice = await hasMappingJsonChanged({ owner, repo, number });
+  const pull_number = number;
+  const changes = await getChangeLog({ owner, repo, pull_number });
+  const showNotice = await hasMappingJsonChanged({ owner, repo, pull_number });
   const body = [
     changes,
     showNotice && mappingJsonNotice,
@@ -96,12 +86,17 @@ const processPullRequest = async ({
     .filter(Boolean)
     .join("\n\n");
 
-  await octokit.pullRequests.update({ owner, repo, number, body });
+  await octokit.pulls.update({ owner, repo, pull_number, body });
 };
 
 const response = (message, statusCode = 200) => ({
   statusCode,
   body: JSON.stringify({ message })
+});
+
+module.exports.ping = async event => ({
+  statusCode: 200,
+  body: event.body
 });
 
 module.exports.webhook = async event => {
