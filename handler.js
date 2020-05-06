@@ -3,11 +3,11 @@ const fetch = require("node-fetch");
 const { Octokit } = require("@octokit/rest");
 
 const octokit = new Octokit({
-  auth: process.env.GITHUB_API_TOKEN
+  auth: process.env.GITHUB_API_TOKEN,
 });
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
-const escapeRegExp = string => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const isProcessable = ({ action, pull_request }) =>
   processableActions.includes(action) &&
@@ -22,25 +22,27 @@ const isStaging = ({ head, base }) =>
 const processableActions = ["opened", "reopened", "synchronize"];
 
 const storyRe = /^Merge pull request #\d+ from Tattoodo\/ch(\d+)\//;
-const extractStoryId = message => (storyRe.exec(message) || [])[1];
+const extractStoryId = (message) => (storyRe.exec(message) || [])[1];
 
-const storyUrl = id =>
+const storyUrl = (id) =>
   `https://api.clubhouse.io/api/v2/stories/${id}?token=${process.env.CLUBHOUSE_API_TOKEN}`;
 
-const fetchStory = async id => fetch(storyUrl(id)).then(r => r.json());
+const fetchStory = async (id) => fetch(storyUrl(id)).then((r) => r.json());
 
 const getChangeLog = async ({ owner, repo, pull_number }) => {
   const commits = await octokit.paginate(
     octokit.pulls.listCommits.endpoint({ owner, repo, pull_number })
   );
   const storyIds = [
-    ...new Set(commits.map(c => extractStoryId(c.commit.message)))
+    ...new Set(commits.map((c) => extractStoryId(c.commit.message))),
   ]
     .filter(Boolean)
     .map(Number)
     .sort((a, b) => a - b);
   const lines = await Promise.all(
-    storyIds.map(id => fetchStory(id).then(story => `ch${id}: ${story.name}`))
+    storyIds.map((id) =>
+      fetchStory(id).then((story) => `ch${id}: ${story.name}`)
+    )
   );
   return ["```", ...lines, "```"].join("\n");
 };
@@ -61,17 +63,14 @@ const hasMappingJsonChanged = async ({ owner, repo, pull_number }) => {
   return files.some(({ filename }) => mappingJsonFile.test(filename));
 };
 
-const stripGeneratedContent = body =>
-  body
-    .replace(changesRe, "")
-    .replace(mappingJsonNoticeRe, "")
-    .trim();
+const stripGeneratedContent = (body) =>
+  body.replace(changesRe, "").replace(mappingJsonNoticeRe, "").trim();
 
 const processPullRequest = async ({
   organization,
   repository,
   number,
-  pull_request
+  pull_request,
 }) => {
   const owner = organization.login;
   const repo = repository.name;
@@ -81,7 +80,7 @@ const processPullRequest = async ({
   const body = [
     changes,
     showNotice && mappingJsonNotice,
-    stripGeneratedContent(pull_request.body)
+    stripGeneratedContent(pull_request.body),
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -91,15 +90,15 @@ const processPullRequest = async ({
 
 const response = (message, statusCode = 200) => ({
   statusCode,
-  body: JSON.stringify({ message })
+  body: JSON.stringify({ message }),
 });
 
-module.exports.ping = async event => ({
+module.exports.ping = async (event) => ({
   statusCode: 200,
-  body: event.body
+  body: event.body,
 });
 
-module.exports.webhook = async event => {
+module.exports.webhook = async (event) => {
   const payload = JSON.parse(event.body);
   const githubEvent = event.headers["X-GitHub-Event"];
 
