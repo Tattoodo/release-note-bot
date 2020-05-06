@@ -40,7 +40,7 @@ const getChangeLog = async ({ owner, repo, pull_number }) => {
     .map(Number)
     .sort((a, b) => a - b);
   const lines = await Promise.all(
-    storyIds.map(id => fetchStory(id).then(story => `[ch${id}] ${story.name}`))
+    storyIds.map(id => fetchStory(id).then(story => `ch${id}: ${story.name}`))
   );
   return ["```", ...lines, "```"].join("\n");
 };
