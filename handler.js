@@ -118,7 +118,12 @@ module.exports.webhook = async (event) => {
     return response("Ignored");
   }
 
-  await processPullRequest(payload);
+  try {
+    await processPullRequest(payload);
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
 
   return response("Processed");
 };
