@@ -13,7 +13,7 @@
     "serverless": "^1.66.0"
   },
   "engines": {
-    "node": "^12"
+    "node": "^14.15"
   },
   "eslintConfig": {
     "env": {
