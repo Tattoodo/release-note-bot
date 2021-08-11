@@ -80,7 +80,7 @@ const processPullRequest = async ({
   const body = [
     changes,
     showNotice && mappingJsonNotice,
-    stripGeneratedContent(pull_request.body),
+    stripGeneratedContent(pull_request.body || ''),
   ]
     .filter(Boolean)
     .join("\n\n");
