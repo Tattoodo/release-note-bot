@@ -19,7 +19,7 @@ service: release-note-bot # NOTE: update this with your service name
 
 provider:
   name: aws
-  runtime: nodejs12.x
+  runtime: nodejs18.x
   environment:
     GITHUB_API_TOKEN: ${ssm:/release-note-bot/GITHUB_API_TOKEN}
     CLUBHOUSE_API_TOKEN: ${ssm:/release-note-bot/CLUBHOUSE_API_TOKEN}

@@ -14,18 +14,18 @@ const isProcessable = ({ action, pull_request }) =>
   (isRelease(pull_request) || isStaging(pull_request));
 
 const isRelease = ({ head, base }) =>
-  head.ref === "release" && base.ref === "master";
+  (head.ref === "release" && base.ref === "master") || (head.ref === 'staging' && base.ref === 'production');
 
 const isStaging = ({ head, base }) =>
-  head.ref === "develop" && base.ref === "release";
+  (head.ref === "develop" && base.ref === "release") || (head.ref === 'develop' && base.ref === 'staging');;
 
 const processableActions = ["opened", "reopened", "synchronize"];
 
-const storyRe = /^Merge pull request #\d+ from Tattoodo\/ch(\d+)\//;
+const storyRe = /^Merge pull request #\d+ from Tattoodo\/sc\-(\d+)\//;
 const extractStoryId = (message) => (storyRe.exec(message) || [])[1];
 
 const storyUrl = (id) =>
-  `https://api.clubhouse.io/api/v2/stories/${id}?token=${process.env.CLUBHOUSE_API_TOKEN}`;
+  `https://api.app.shortcut.com/api/v2/stories/${id}?token=${process.env.CLUBHOUSE_API_TOKEN}`;
 
 const fetchStory = async (id) => fetch(storyUrl(id)).then((r) => r.json());
 
@@ -41,7 +41,7 @@ const getChangeLog = async ({ owner, repo, pull_number }) => {
     .sort((a, b) => a - b);
   const lines = await Promise.all(
     storyIds.map((id) =>
-      fetchStory(id).then((story) => `ch${id}: ${story.name}`)
+      fetchStory(id).then((story) => `sc-${id}: ${story.name}`)
     )
   );
   return ["```", ...lines, "```"].join("\n");
