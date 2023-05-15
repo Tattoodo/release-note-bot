@@ -1,5 +1,11 @@
+/**
+ *
+ *  MAKE YOUR EDITS IN THE REPO
+ *  AND USE `yarn deploy` TO DEPLOY
+ *
+ */
+
 "use strict";
-const fetch = require("node-fetch");
 const { Octokit } = require("@octokit/rest");
 
 const octokit = new Octokit({
@@ -14,20 +20,23 @@ const isProcessable = ({ action, pull_request }) =>
   (isRelease(pull_request) || isStaging(pull_request));
 
 const isRelease = ({ head, base }) =>
-  (head.ref === "release" && base.ref === "master") || (head.ref === 'staging' && base.ref === 'production');
+  (head.ref === "release" && base.ref === "master") ||
+  (head.ref === "staging" && base.ref === "production");
 
 const isStaging = ({ head, base }) =>
-  (head.ref === "develop" && base.ref === "release") || (head.ref === 'develop' && base.ref === 'staging');;
+  (head.ref === "develop" && base.ref === "release") ||
+  (head.ref === "develop" && base.ref === "staging");
 
 const processableActions = ["opened", "reopened", "synchronize"];
 
-const storyRe = /^Merge pull request #\d+ from Tattoodo\/sc\-(\d+)\//;
+const storyRe = /^Merge pull request #\d+ from Tattoodo\/sc-(\d+)\//;
 const extractStoryId = (message) => (storyRe.exec(message) || [])[1];
 
 const storyUrl = (id) =>
   `https://api.app.shortcut.com/api/v2/stories/${id}?token=${process.env.CLUBHOUSE_API_TOKEN}`;
 
-const fetchStory = async (id) => fetch(storyUrl(id)).then((r) => r.json());
+const fetchStory = async (id) =>
+  global.fetch(storyUrl(id)).then((r) => r.json());
 
 const getChangeLog = async ({ owner, repo, pull_number }) => {
   const commits = await octokit.paginate(
@@ -80,7 +89,7 @@ const processPullRequest = async ({
   const body = [
     changes,
     showNotice && mappingJsonNotice,
-    stripGeneratedContent(pull_request.body || ''),
+    stripGeneratedContent(pull_request.body || ""),
   ]
     .filter(Boolean)
     .join("\n\n");

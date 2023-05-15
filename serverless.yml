@@ -61,11 +61,11 @@ functions:
   ping:
     handler: handler.ping
     events:
-      - http: GET ping
+      - http: GET /ping
   webhook:
     handler: handler.webhook
     events:
-      - http: POST webhook
+      - http: POST /webhook
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
