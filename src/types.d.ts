@@ -16,3 +16,8 @@ export interface PullRequestWithOrganization extends PullRequest {
 		description: string;
 	};
 }
+
+interface WebhookEffect {
+	shouldRun: (payload: PullRequestWithOrganization) => Promise<boolean>;
+	run: (payload: PullRequestWithOrganization) => Promise<void>;
+}
