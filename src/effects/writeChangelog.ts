@@ -70,6 +70,15 @@ export const shouldRun = async ({ action, pull_request }: PullRequestEventWithOr
 	return changelogTriggerActions.includes(action) && (isBranchProduction(branchName) || isBranchStaging(branchName));
 };
 
+/**
+ * This effect reads commits from the pull request,
+ * and adds a changelog to the pull request body
+ * with stories from Shortcut.
+ *
+ * It also adds a notice if the pull request contains
+ * changes to Elastic mappings.
+ */
+
 export const run = async (payload: PullRequestEventWithOrganization): Promise<void> => {
 	await addChangelogToPullRequest(payload);
 };

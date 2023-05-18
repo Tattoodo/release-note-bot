@@ -1,4 +1,3 @@
-
 export const isBranchProduction = (branchName: string): boolean => {
 	return branchName === 'master' || branchName === 'main' || branchName === 'production';
 };
@@ -12,7 +11,6 @@ export const isBranchDevelopment = (branchName: string): boolean => {
 };
 
 export const isRegularRelease = (baseBranchName: string, headBranchName: string): boolean => {
-
 	if (isBranchProduction(baseBranchName) && isBranchStaging(headBranchName)) {
 		return true;
 	}

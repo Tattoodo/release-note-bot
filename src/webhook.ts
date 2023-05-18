@@ -2,13 +2,14 @@ import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { PullRequestEventWithOrganization, WebhookEffect } from './types';
 import * as WriteChangelogEffect from './effects/writeChangelog';
 import * as RenameTitleEffect from './effects/renameTitle';
+import * as TagReleaseEffect from './effects/tagRelease';
 
 const response = (message: string, statusCode = 200): APIGatewayProxyResult => ({
 	statusCode,
-	body: JSON.stringify({ message })
+	body: JSON.stringify({ message }, null, 2)
 });
 
-const effects: WebhookEffect[] = [WriteChangelogEffect, RenameTitleEffect];
+const effects: WebhookEffect[] = [WriteChangelogEffect, RenameTitleEffect, TagReleaseEffect];
 
 export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
 	if (!event.body) {
@@ -26,16 +27,24 @@ export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyRes
 		return response(`Unsupported X-GitHub-Event; [${githubEvent}]`, 412);
 	}
 
-	await Promise.all(
-		effects.map(async (effect) => {
-			const shouldRun = await effect.shouldRun(payload);
-			if (!shouldRun) {
-				return;
-			}
+	try {
+		const maybeMessages = await Promise.all(
+			effects.map(async (effect) => {
+				const shouldRun = await effect.shouldRun(payload);
+				if (!shouldRun) {
+					return;
+				}
 
-			await effect.run(payload);
-		})
-	);
+				const maybeMessage = await effect.run(payload);
+				return maybeMessage;
+			})
+		);
 
-	return response('Processed');
+		const messages = maybeMessages.filter((maybeMessage) => Boolean(maybeMessage));
+		const output = ['Processed', ...messages].filter((message) => Boolean(message)).join('\n');
+
+		return response(output);
+	} catch (error) {
+		return response(error, 500);
+	}
 }
