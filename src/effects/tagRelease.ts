@@ -2,7 +2,14 @@ import { isBranchProduction } from '../helpers';
 import octokit from '../octokit';
 import { PullRequestEventWithOrganization } from '../types';
 
+const enabledForRepos = ['api-node-nest'];
+
 export const shouldRun = async (payload: PullRequestEventWithOrganization): Promise<boolean> => {
+	const repository = payload.repository;
+	if (!enabledForRepos.includes(repository.name)) {
+		return false;
+	}
+
 	const baseRef = payload.pull_request.base.ref;
 	const isProduction = isBranchProduction(baseRef);
 	const isCloseAction = payload.action === 'closed';

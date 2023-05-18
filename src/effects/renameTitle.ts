@@ -2,9 +2,18 @@ import { isBranchProduction, isBranchStaging, isRegularRelease } from '../helper
 import octokit from '../octokit';
 import { PullRequestEventWithOrganization } from '../types';
 
+const enabledForRepos = ['api-node-nest'];
 const changelogTriggerActions = ['opened'];
 
-export const shouldRun = async ({ action, pull_request }: PullRequestEventWithOrganization): Promise<boolean> => {
+export const shouldRun = async ({
+	action,
+	pull_request,
+	repository
+}: PullRequestEventWithOrganization): Promise<boolean> => {
+	if (!enabledForRepos.includes(repository.name)) {
+		return false;
+	}
+
 	return changelogTriggerActions.includes(action) && isRegularRelease(pull_request.base.ref, pull_request.head.ref);
 };
 
