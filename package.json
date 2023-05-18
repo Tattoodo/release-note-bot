@@ -28,7 +28,7 @@
   },
   "scripts": {
     "build": "prettier --write *.js && yarn lint && yarn tsc",
-    "deploy": "yarn build && serverless deploy",
+    "deploy": "rm -rf dist ; yarn build && serverless deploy",
     "lint": "eslint *.js",
     "logs": "serverless logs -f webhook -t"
   }
