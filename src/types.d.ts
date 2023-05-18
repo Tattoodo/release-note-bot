@@ -1,6 +1,6 @@
 import { PullRequest } from 'github-webhook-event-types';
 
-export interface PullRequestWithOrganization extends PullRequest {
+export interface PullRequestEventWithOrganization extends PullRequest {
 	organization: {
 		login: string;
 		id: number;
@@ -18,6 +18,6 @@ export interface PullRequestWithOrganization extends PullRequest {
 }
 
 interface WebhookEffect {
-	shouldRun: (payload: PullRequestWithOrganization) => Promise<boolean>;
-	run: (payload: PullRequestWithOrganization) => Promise<void>;
+	shouldRun: (payload: PullRequestEventWithOrganization) => Promise<boolean>;
+	run: (payload: PullRequestEventWithOrganization) => Promise<void>;
 }

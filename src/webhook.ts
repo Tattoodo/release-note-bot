@@ -1,5 +1,5 @@
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { PullRequestWithOrganization, WebhookEffect } from './types';
+import { PullRequestEventWithOrganization, WebhookEffect } from './types';
 import * as WriteChangelogEffect from './effects/writeChangelog';
 import * as RenameTitleEffect from './effects/renameTitle';
 
@@ -15,7 +15,7 @@ export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyRes
 		return response('No body provided', 400);
 	}
 
-	const payload = JSON.parse(event.body) as PullRequestWithOrganization;
+	const payload = JSON.parse(event.body) as PullRequestEventWithOrganization;
 	const githubEvent = event.headers['X-GitHub-Event'];
 
 	if (!githubEvent) {

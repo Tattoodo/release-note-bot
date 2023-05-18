@@ -1,14 +1,14 @@
 import { isBranchProduction, isRegularRelease } from '../helpers';
 import octokit from '../octokit';
-import { PullRequestWithOrganization } from '../types';
+import { PullRequestEventWithOrganization } from '../types';
 
 const changelogTriggerActions = ['opened'];
 
-export const shouldRun = async ({ action, pull_request }: PullRequestWithOrganization): Promise<boolean> => {
+export const shouldRun = async ({ action, pull_request }: PullRequestEventWithOrganization): Promise<boolean> => {
 	return changelogTriggerActions.includes(action) && isRegularRelease(pull_request.base.ref, pull_request.head.ref);
 };
 
-export const run = async (payload: PullRequestWithOrganization): Promise<void> => {
+export const run = async (payload: PullRequestEventWithOrganization): Promise<void> => {
 	const branchName = payload.pull_request.base.ref;
 	const isProductionRelease = isBranchProduction(branchName);
 

@@ -1,5 +1,5 @@
 import { isBranchProduction, isBranchStaging } from '../helpers';
-import { PullRequestWithOrganization } from '../types';
+import { PullRequestEventWithOrganization } from '../types';
 import { RestEndpointMethodTypes } from '@octokit/rest';
 import octokit from '../octokit';
 
@@ -51,7 +51,7 @@ const addChangelogToPullRequest = async ({
 	repository,
 	number,
 	pull_request
-}: PullRequestWithOrganization) => {
+}: PullRequestEventWithOrganization) => {
 	const owner = organization.login;
 	const repositoryName = repository.name;
 	const pullRequestNumber = number;
@@ -64,12 +64,12 @@ const addChangelogToPullRequest = async ({
 	await octokit.pulls.update({ owner, repo: repositoryName, pull_number: pullRequestNumber, body });
 };
 
-export const shouldRun = async ({ action, pull_request }: PullRequestWithOrganization): Promise<boolean> => {
+export const shouldRun = async ({ action, pull_request }: PullRequestEventWithOrganization): Promise<boolean> => {
 	const branchName = pull_request.base.ref;
 
 	return changelogTriggerActions.includes(action) && (isBranchProduction(branchName) || isBranchStaging(branchName));
 };
 
-export const run = async (payload: PullRequestWithOrganization): Promise<void> => {
+export const run = async (payload: PullRequestEventWithOrganization): Promise<void> => {
 	await addChangelogToPullRequest(payload);
 };
