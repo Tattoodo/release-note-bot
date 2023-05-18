@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+	  "target": "ESNext",
+	  "module": "CommonJS",
+	  "removeComments": true,
+	  "preserveConstEnums": true,
+	  "sourceRoot": "./src/",
+	  "rootDir": "./src/",
+	  "outDir": "./dist",
+	  "sourceMap": true,
+	  "strictNullChecks": true,
+	  "noImplicitAny": true
+	}
+  }

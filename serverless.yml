@@ -59,11 +59,11 @@ provider:
 
 functions:
   ping:
-    handler: handler.ping
+    handler: dist/ping.handle
     events:
       - http: GET /ping
   webhook:
-    handler: handler.webhook
+    handler: dist/webhook.handle
     events:
       - http: POST /webhook
 
