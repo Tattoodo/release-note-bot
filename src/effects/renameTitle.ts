@@ -7,7 +7,7 @@ import { isBranchProduction, isBranchStaging, isRegularRelease } from '../helper
 import octokit from '../octokit';
 import { PullRequestEvent } from '../types';
 
-const enabledForRepos = ['api-node-nest'];
+const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web'];
 const changelogTriggerActions = ['opened'];
 
 export const shouldRun = async ({ action, pull_request, repository }: PullRequestEvent): Promise<boolean> => {

@@ -6,7 +6,7 @@
  * - release-minor
  * - release-patch
  * then the release will be bumped accordingly.
- * 
+ *
  * If the pull request has no label, then the default bump type will be used.
  */
 
@@ -20,7 +20,7 @@ type VersionObject = {
 	patch: number;
 };
 
-const enabledForRepos = ['api-node-nest'];
+const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web'];
 const repoVersioningDefaults: Record<string, keyof VersionObject> = {
 	'tattoodo-web': 'patch',
 	'backend-api': 'minor',
