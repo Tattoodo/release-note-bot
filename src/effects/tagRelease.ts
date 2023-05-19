@@ -1,10 +1,27 @@
 import { isBranchProduction } from '../helpers';
 import octokit from '../octokit';
-import { PullRequestEventWithOrganization } from '../types';
+import { PullRequestEvent } from '../types';
+
+type VersionObject = {
+	major: number;
+	minor: number;
+	patch: number;
+};
 
 const enabledForRepos = ['api-node-nest'];
+const repoVersioningDefaults: Record<string, keyof VersionObject> = {
+	'tattoodo-web': 'patch',
+	'backend-api': 'minor',
+	'api-node-nest': 'minor'
+};
 
-export const shouldRun = async (payload: PullRequestEventWithOrganization): Promise<boolean> => {
+const versionLabelNames: Record<keyof VersionObject, string> = {
+	major: 'release-major',
+	minor: 'release-minor',
+	patch: 'release-patch'
+};
+
+export const shouldRun = async (payload: PullRequestEvent): Promise<boolean> => {
 	const repository = payload.repository;
 	if (!enabledForRepos.includes(repository.name)) {
 		return false;
@@ -22,9 +39,13 @@ export const shouldRun = async (payload: PullRequestEventWithOrganization): Prom
 	return true;
 };
 
-const getVersions = (latestReleaseVersion: string): number[] => {
+const getVersions = (latestReleaseVersion: string): VersionObject => {
 	const [major, minor, patch] = latestReleaseVersion.split('.').map(Number);
-	return [major, minor, patch];
+	return {
+		major: major || 0,
+		minor: minor || 0,
+		patch: patch || 0
+	};
 };
 
 const splitVersionString = (
@@ -57,7 +78,61 @@ const joinVersionString = (
 	return versionString;
 };
 
-export const run = async (payload: PullRequestEventWithOrganization): Promise<string | void> => {
+const getKeyToBump = (
+	labels: PullRequestEvent['pull_request']['labels'],
+	defaultBumpKey: keyof VersionObject
+): keyof VersionObject => {
+	const releaseLabels = labels.filter((label) => label.name.startsWith('release-'));
+	const shouldBumpMajor = releaseLabels.some((label) => label.name === versionLabelNames.major);
+	const shouldBumpMinor = releaseLabels.some((label) => label.name === versionLabelNames.minor);
+	const shouldBumpPatch = releaseLabels.some((label) => label.name === versionLabelNames.patch);
+
+	if (shouldBumpMajor) {
+		return 'major';
+	}
+
+	if (shouldBumpMinor) {
+		return 'minor';
+	}
+
+	if (shouldBumpPatch) {
+		return 'patch';
+	}
+
+	return defaultBumpKey;
+};
+
+const bumpVersion = (
+	versionObject: VersionObject,
+	labels: PullRequestEvent['pull_request']['labels'],
+	defaultBumpKey: keyof VersionObject
+): string | null => {
+	const keyToBump = getKeyToBump(labels, defaultBumpKey);
+	const { major, minor, patch } = versionObject;
+
+	let newMajor = major;
+	let newMinor: number | null = minor;
+	let newPatch: number | null = patch;
+
+	if (keyToBump === 'major') {
+		newMajor = major + 1;
+		newMinor = null;
+		newPatch = null;
+	} else if (keyToBump === 'minor') {
+		newMinor = minor + 1;
+		newPatch = null;
+	} else if (keyToBump === 'patch') {
+		newPatch = patch + 1;
+	}
+
+	const newVersionString = [newMajor, newMinor, newPatch]
+		.filter((versionFragment) => typeof versionFragment === 'number')
+		.join('.');
+
+	return newVersionString;
+};
+
+export const run = async (payload: PullRequestEvent): Promise<string | void> => {
 	const latestReleases = await octokit.repos.listReleases({
 		owner: payload.organization.login,
 		repo: payload.repository.name,
@@ -66,16 +141,23 @@ export const run = async (payload: PullRequestEventWithOrganization): Promise<st
 	const latestRelease = latestReleases?.data?.[0];
 	const latestReleaseVersion = latestRelease.tag_name;
 	const versioningDetails = splitVersionString(latestReleaseVersion || '');
-	const versions = getVersions(versioningDetails?.version || '');
+	const versionObject = getVersions(versioningDetails?.version || '');
 
-	if (!versions) {
+	if (!versionObject) {
 		return;
 	}
 
-	const [major, minor, patch] = versions;
-	const newMinor = minor + 1;
-	const newVersionString = [major, newMinor, patch].filter((minor) => typeof minor === 'number').join('.');
-	const newVersioningDetails = { ...versioningDetails, version: newVersionString };
+	const bumpedVersion = bumpVersion(
+		versionObject,
+		payload.pull_request.labels,
+		repoVersioningDefaults[payload.repository.name]
+	);
+
+	if (!bumpedVersion) {
+		return;
+	}
+
+	const newVersioningDetails = { ...versioningDetails, version: bumpedVersion };
 	const newVersion = joinVersionString(newVersioningDetails);
 
 	if (!newVersion) {

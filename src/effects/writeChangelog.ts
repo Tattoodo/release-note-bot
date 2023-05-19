@@ -1,5 +1,5 @@
 import { isBranchProduction, isBranchStaging } from '../helpers';
-import { PullRequestEventWithOrganization } from '../types';
+import { PullRequestEvent } from '../types';
 import { RestEndpointMethodTypes } from '@octokit/rest';
 import octokit from '../octokit';
 
@@ -46,12 +46,7 @@ const hasMappingJsonChanged = async (owner: string, repo: string, pull_number: n
 
 const stripGeneratedContent = (body: string) => body.replace(changesRe, '').replace(mappingJsonNoticeRe, '').trim();
 
-const addChangelogToPullRequest = async ({
-	organization,
-	repository,
-	number,
-	pull_request
-}: PullRequestEventWithOrganization) => {
+const addChangelogToPullRequest = async ({ organization, repository, number, pull_request }: PullRequestEvent) => {
 	const owner = organization.login;
 	const repositoryName = repository.name;
 	const pullRequestNumber = number;
@@ -64,7 +59,7 @@ const addChangelogToPullRequest = async ({
 	await octokit.pulls.update({ owner, repo: repositoryName, pull_number: pullRequestNumber, body });
 };
 
-export const shouldRun = async ({ action, pull_request }: PullRequestEventWithOrganization): Promise<boolean> => {
+export const shouldRun = async ({ action, pull_request }: PullRequestEvent): Promise<boolean> => {
 	const branchName = pull_request.base.ref;
 
 	return changelogTriggerActions.includes(action) && (isBranchProduction(branchName) || isBranchStaging(branchName));
@@ -79,6 +74,6 @@ export const shouldRun = async ({ action, pull_request }: PullRequestEventWithOr
  * changes to Elastic mappings.
  */
 
-export const run = async (payload: PullRequestEventWithOrganization): Promise<void> => {
+export const run = async (payload: PullRequestEvent): Promise<void> => {
 	await addChangelogToPullRequest(payload);
 };
