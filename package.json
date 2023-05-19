@@ -28,9 +28,9 @@
     "url": "https://github.com/Tattoodo/release-note-bot"
   },
   "scripts": {
-    "build": "prettier --write *.js && yarn lint && yarn tsc",
+    "build": "prettier --write src/**/*.ts && yarn lint && yarn tsc",
     "deploy": "rm -rf dist ; yarn build && serverless deploy",
-    "lint": "eslint *.js",
+    "lint": "eslint src/**/*.ts",
     "logs": "serverless logs -f webhook -t"
   }
 }
