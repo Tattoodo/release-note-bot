@@ -1,3 +1,8 @@
+/**
+ * This effect will rename the title of the pull request
+ * to either "Production Release" or "Staging Release"
+ */
+
 import { isBranchProduction, isBranchStaging, isRegularRelease } from '../helpers';
 import octokit from '../octokit';
 import { PullRequestEvent } from '../types';
@@ -12,11 +17,6 @@ export const shouldRun = async ({ action, pull_request, repository }: PullReques
 
 	return changelogTriggerActions.includes(action) && isRegularRelease(pull_request.base.ref, pull_request.head.ref);
 };
-
-/**
- * This effect will rename the title of the pull request
- * to either "Production Release" or "Staging Release"
- */
 
 export const run = async (payload: PullRequestEvent): Promise<void> => {
 	const branchName = payload.pull_request.base.ref;

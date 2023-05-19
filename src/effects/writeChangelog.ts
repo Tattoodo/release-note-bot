@@ -1,3 +1,12 @@
+/**
+ * This effect reads commits from the pull request,
+ * and adds a changelog to the pull request body
+ * with stories from Shortcut.
+ *
+ * It also adds a notice if the pull request contains
+ * changes to Elastic mappings.
+ */
+
 import { isBranchProduction, isBranchStaging } from '../helpers';
 import { PullRequestEvent } from '../types';
 import { RestEndpointMethodTypes } from '@octokit/rest';
@@ -64,15 +73,6 @@ export const shouldRun = async ({ action, pull_request }: PullRequestEvent): Pro
 
 	return changelogTriggerActions.includes(action) && (isBranchProduction(branchName) || isBranchStaging(branchName));
 };
-
-/**
- * This effect reads commits from the pull request,
- * and adds a changelog to the pull request body
- * with stories from Shortcut.
- *
- * It also adds a notice if the pull request contains
- * changes to Elastic mappings.
- */
 
 export const run = async (payload: PullRequestEvent): Promise<void> => {
 	await addChangelogToPullRequest(payload);

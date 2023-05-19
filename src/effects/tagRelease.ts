@@ -1,3 +1,15 @@
+/**
+ * This release effect will create a new release on the repository
+ * when a pull request is merged into production.
+ * If the pull request has a label that matches one of the following:
+ * - release-major
+ * - release-minor
+ * - release-patch
+ * then the release will be bumped accordingly.
+ * 
+ * If the pull request has no label, then the default bump type will be used.
+ */
+
 import { isBranchProduction } from '../helpers';
 import octokit from '../octokit';
 import { PullRequestEvent } from '../types';
@@ -14,6 +26,7 @@ const repoVersioningDefaults: Record<string, keyof VersionObject> = {
 	'backend-api': 'minor',
 	'api-node-nest': 'minor'
 };
+const fallbackBumpKey = 'minor';
 
 const versionLabelNames: Record<keyof VersionObject, string> = {
 	major: 'release-major',
@@ -99,7 +112,7 @@ const getKeyToBump = (
 		return 'patch';
 	}
 
-	return defaultBumpKey;
+	return defaultBumpKey || fallbackBumpKey;
 };
 
 const bumpVersion = (
