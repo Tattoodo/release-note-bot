@@ -17,6 +17,8 @@ const changelogTriggerActions = ['opened', 'reopened', 'synchronize'];
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const refIsStory = (ref: string) => /^sc-(\d+)\/\D+$/.test(ref);
+const extractStoryIdFromRef = (ref: string) => (refIsStory(ref) ? Number(ref.match(/^sc-(\d+)\/\D+$/)?.[1]) : null);
 const storyRe = /^Merge pull request #\d+ from Tattoodo\/sc-(\d+)\//;
 const extractStoryId = (message: string) => (storyRe.exec(message) || [])[1];
 
@@ -29,15 +31,19 @@ interface ShortcutStory {
 }
 const fetchStory = async (id: number): Promise<ShortcutStory> => fetch(storyUrl(id)).then((r) => r.json());
 
-const getChangeLog = async (owner: string, repositoryName: string, pullRequestNumber: number) => {
+const getChangeLog = async (owner: string, repositoryName: string, pullRequestNumber: number, headRef: string) => {
 	const commits = (await octokit.paginate(
 		octokit.pulls.listCommits.endpoint({ owner, repo: repositoryName, pull_number: pullRequestNumber })
 	)) as RestEndpointMethodTypes['pulls']['listCommits']['response']['data'];
-	const storyIds = [...new Set(commits.map((c) => extractStoryId(c.commit.message)))]
+	const storyIdFromRef = extractStoryIdFromRef(headRef);
+	const storyIds = [storyIdFromRef, ...commits.map((c) => extractStoryId(c.commit.message))];
+	const storyIdsSorted = [...new Set(storyIds)]
 		.filter(Boolean)
 		.map(Number)
 		.sort((a, b) => a - b);
-	const lines = await Promise.all(storyIds.map((id) => fetchStory(id).then((story) => `sc-${id}: ${story.name}`)));
+	const lines = await Promise.all(
+		storyIdsSorted.map((id) => fetchStory(id).then((story) => `sc-${id}: ${story.name}`))
+	);
 	return ['```', ...lines, '```'].join('\n');
 };
 
@@ -59,7 +65,7 @@ const addChangelogToPullRequest = async ({ organization, repository, number, pul
 	const owner = organization.login;
 	const repositoryName = repository.name;
 	const pullRequestNumber = number;
-	const changes = await getChangeLog(owner, repositoryName, pullRequestNumber);
+	const changes = await getChangeLog(owner, repositoryName, pullRequestNumber, pull_request.head.ref);
 	const showNotice = await hasMappingJsonChanged(owner, repositoryName, pullRequestNumber);
 	const body = [changes, showNotice && mappingJsonNotice, stripGeneratedContent(pull_request.body || '')]
 		.filter(Boolean)
