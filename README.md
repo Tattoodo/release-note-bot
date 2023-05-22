@@ -25,10 +25,7 @@ yarn install
 ```
 
 ## Deployment
-The bot is deployed using the [Serverless Framework](https://www.serverless.com/). To deploy the bot, run the following command:
-```bash
-yarn deploy
-```
+The bot is automatically deployed using the [Serverless Framework](https://www.serverless.com/) when the `master` branch is updated.
 
 ## Secrets
 All secrets are stored in AWS Parameter Store.
