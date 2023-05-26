@@ -7,8 +7,8 @@
  * changes to Elastic mappings.
  */
 
-import { isBranchProduction, isBranchStaging } from '../helpers';
-import { PullRequestEvent } from '../types';
+import { isBranchProduction, isBranchStaging, isPullRequest } from '../helpers';
+import { GithubEvent, PullRequestEvent } from '../types';
 import { RestEndpointMethodTypes } from '@octokit/rest';
 import octokit from '../octokit';
 
@@ -74,7 +74,12 @@ const addChangelogToPullRequest = async ({ organization, repository, number, pul
 	await octokit.pulls.update({ owner, repo: repositoryName, pull_number: pullRequestNumber, body });
 };
 
-export const shouldRun = async ({ action, pull_request }: PullRequestEvent): Promise<boolean> => {
+export const shouldRun = async (payload: GithubEvent): Promise<boolean> => {
+	if (!isPullRequest(payload)) {
+		return false;
+	}
+
+	const { action, pull_request } = payload;
 	const branchName = pull_request.base.ref;
 
 	return changelogTriggerActions.includes(action) && (isBranchProduction(branchName) || isBranchStaging(branchName));

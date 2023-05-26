@@ -1,3 +1,5 @@
+import { GithubEvent, PullRequestEvent, PushEvent } from "./types";
+
 export const isBranchProduction = (branchName: string): boolean => {
 	return branchName === 'master' || branchName === 'main' || branchName === 'production';
 };
@@ -20,4 +22,20 @@ export const isRegularRelease = (baseBranchName: string, headBranchName: string)
 	}
 
 	return false;
+};
+
+export const isPullRequest = (payload: GithubEvent): payload is PullRequestEvent => {
+	if (!payload) {
+		return false;
+	}
+
+	return 'pull_request' in payload;
+};
+
+export const isPush = (payload: GithubEvent): payload is PushEvent => {
+	if (!payload) {
+		return false;
+	}
+
+	return 'pusher' in payload;
 };

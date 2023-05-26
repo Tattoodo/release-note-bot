@@ -23,10 +23,6 @@ export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyRes
 		return response('No X-GitHub-Event found on request', 412);
 	}
 
-	if (githubEvent !== 'pull_request') {
-		return response(`Unsupported X-GitHub-Event; [${githubEvent}]`, 412);
-	}
-
 	try {
 		const maybeMessages = await Promise.all(
 			effects.map(async (effect) => {

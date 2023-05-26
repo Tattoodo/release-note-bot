@@ -1,4 +1,21 @@
-import { PullRequest } from 'github-webhook-event-types';
+import { PullRequest, Push } from 'github-webhook-event-types';
+
+export interface PushEvent extends Push {
+	head_commit: {
+		id: string;
+		message: string;
+		timestamp: string;
+		author: {
+			name: string;
+			email: string;
+			username: string;
+		};
+		url: string;
+		added: string[];
+		removed: string[];
+		modified: string[];
+	};
+}
 
 export interface PullRequestEvent extends PullRequest {
 	organization: {
@@ -28,7 +45,9 @@ export interface PullRequestEvent extends PullRequest {
 	};
 }
 
+export type GithubEvent = PushEvent | PullRequestEvent;
+
 interface WebhookEffect {
-	shouldRun: (payload: PullRequestEvent) => Promise<boolean>;
-	run: (payload: PullRequestEvent) => Promise<void | string>;
+	shouldRun: (payload: GithubEvent) => Promise<boolean>;
+	run: (payload: GithubEvent) => Promise<void | string>;
 }

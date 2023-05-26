@@ -10,7 +10,7 @@
  * If the pull request has no label, then the default bump type will be used.
  */
 
-import { isBranchProduction } from '../helpers';
+import { isBranchProduction, isPullRequest } from '../helpers';
 import octokit from '../octokit';
 import { PullRequestEvent } from '../types';
 
@@ -35,7 +35,11 @@ const versionLabelNames: Record<keyof VersionObject, string> = {
 };
 
 export const shouldRun = async (payload: PullRequestEvent): Promise<boolean> => {
-	const repository = payload.repository;
+	if (!isPullRequest(payload)) {
+		return false;
+	}
+
+	const { repository } = payload;
 	if (!enabledForRepos.includes(repository.name)) {
 		return false;
 	}

@@ -3,14 +3,20 @@
  * to either "Production Release" or "Staging Release"
  */
 
-import { isBranchProduction, isBranchStaging, isRegularRelease } from '../helpers';
+import { isBranchProduction, isBranchStaging, isPullRequest, isRegularRelease } from '../helpers';
 import octokit from '../octokit';
 import { PullRequestEvent } from '../types';
 
 const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web'];
 const changelogTriggerActions = ['opened'];
 
-export const shouldRun = async ({ action, pull_request, repository }: PullRequestEvent): Promise<boolean> => {
+export const shouldRun = async (payload: PullRequestEvent): Promise<boolean> => {
+	if (!isPullRequest(payload)) {
+		return false;
+	}
+
+	const { action, pull_request, repository } = payload;
+
 	if (!enabledForRepos.includes(repository.name)) {
 		return false;
 	}
