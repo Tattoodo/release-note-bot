@@ -4,7 +4,8 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
-    "@octokit/rest": "^19.0.8"
+    "@octokit/rest": "^19.0.8",
+    "@slack/webhook": "^6.1.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.115",
@@ -28,7 +29,7 @@
     "url": "https://github.com/Tattoodo/release-note-bot"
   },
   "scripts": {
-	"clean": "rm -rf dist",
+    "clean": "rm -rf dist",
     "build": "yarn clean ; prettier --write src/**/*.ts && yarn lint && yarn tsc",
     "deploy": "yarn build && serverless deploy",
     "lint": "eslint src/**/*.ts",

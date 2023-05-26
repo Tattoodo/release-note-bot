@@ -26,6 +26,8 @@ provider:
   environment:
     GITHUB_API_TOKEN: ${ssm:/release-note-bot/GITHUB_API_TOKEN}
     CLUBHOUSE_API_TOKEN: ${ssm:/release-note-bot/CLUBHOUSE_API_TOKEN}
+    RELEASE_SLACK_WEBHOOK_URL_PRODUCTION: ${ssm:/release-note-bot/RELEASE_SLACK_WEBHOOK_URL_PRODUCTION}
+    RELEASE_SLACK_WEBHOOK_URL_STAGING: ${ssm:/release-note-bot/RELEASE_SLACK_WEBHOOK_URL_STAGING}
 
 # you can overwrite defaults here
 #  stage: dev

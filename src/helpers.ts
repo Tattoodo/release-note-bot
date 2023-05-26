@@ -1,4 +1,4 @@
-import { GithubEvent, PullRequestEvent, PushEvent } from "./types";
+import { GithubEvent, PullRequestEvent, PushEvent } from './types';
 
 export const isBranchProduction = (branchName: string): boolean => {
 	return branchName === 'master' || branchName === 'main' || branchName === 'production';

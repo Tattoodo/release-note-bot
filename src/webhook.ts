@@ -3,13 +3,14 @@ import { PullRequestEvent, WebhookEffect } from './types';
 import * as WriteChangelogEffect from './effects/writeChangelog';
 import * as RenameTitleEffect from './effects/renameTitle';
 import * as TagReleaseEffect from './effects/tagRelease';
+import * as NotifyDeploymentInSlack from './effects/notifyDeploymentInSlack';
 
 const response = (message: string, statusCode = 200): APIGatewayProxyResult => ({
 	statusCode,
 	body: JSON.stringify({ message }, null, 2)
 });
 
-const effects: WebhookEffect[] = [WriteChangelogEffect, RenameTitleEffect, TagReleaseEffect];
+const effects: WebhookEffect[] = [WriteChangelogEffect, RenameTitleEffect, TagReleaseEffect, NotifyDeploymentInSlack];
 
 export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
 	if (!event.body) {
@@ -31,8 +32,12 @@ export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyRes
 					return;
 				}
 
-				const maybeMessage = await effect.run(payload);
-				return maybeMessage;
+				try {
+					const maybeMessage = await effect.run(payload);
+					return maybeMessage;
+				} catch (error) {
+					return `Error running effect ${error.message}`;
+				}
 			})
 		);
 
