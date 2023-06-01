@@ -51,7 +51,8 @@ export const run = async (payload: PushEvent): Promise<string | void> => {
 		repo,
 		tag_name: extractedVersion,
 		name: extractedVersion,
-		make_latest: 'true'
+		make_latest: 'true',
+		target_commitish: branchName
 	});
 
 	const releaseNotes = await octokit.repos.generateReleaseNotes({

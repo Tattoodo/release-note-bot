@@ -187,7 +187,8 @@ export const run = async (payload: PullRequestEvent): Promise<string | void> => 
 		tag_name: newVersion,
 		name: newVersion,
 		body: payload.pull_request.body,
-		make_latest: 'true'
+		make_latest: 'true',
+		target_commitish: payload.pull_request.base.ref
 	});
 
 	return 'tagRelease ran';
