@@ -22,7 +22,7 @@ type VersionObject = {
 
 const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web'];
 const repoVersioningDefaults: Record<string, keyof VersionObject> = {
-	'tattoodo-web': 'patch',
+	'tattoodo-web': 'minor',
 	'backend-api': 'minor',
 	'api-node-nest': 'minor'
 };
