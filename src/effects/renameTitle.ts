@@ -10,6 +10,8 @@ import { PullRequestEvent } from '../types';
 const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web'];
 const changelogTriggerActions = ['opened'];
 
+export const name = 'renameTitle';
+
 export const shouldRun = async (payload: PullRequestEvent): Promise<boolean> => {
 	if (!isPullRequest(payload)) {
 		return false;

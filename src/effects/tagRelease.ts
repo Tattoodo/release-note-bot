@@ -34,6 +34,8 @@ const versionLabelNames: Record<keyof VersionObject, string> = {
 	patch: 'release-patch'
 };
 
+export const name = 'tagRelease';
+
 export const shouldRun = async (payload: PullRequestEvent): Promise<boolean> => {
 	if (!isPullRequest(payload)) {
 		return false;
@@ -161,7 +163,7 @@ export const run = async (payload: PullRequestEvent): Promise<string | void> => 
 	const versionObject = getVersions(versioningDetails?.version || '');
 
 	if (!versionObject) {
-		return;
+		return 'tagRelease: no version object';
 	}
 
 	const bumpedVersion = bumpVersion(
@@ -171,14 +173,14 @@ export const run = async (payload: PullRequestEvent): Promise<string | void> => 
 	);
 
 	if (!bumpedVersion) {
-		return;
+		return 'tagRelease: no bumped version';
 	}
 
 	const newVersioningDetails = { ...versioningDetails, version: bumpedVersion };
 	const newVersion = joinVersionString(newVersioningDetails);
 
 	if (!newVersion) {
-		return;
+		return 'tagRelease: no new version';
 	}
 
 	await octokit.repos.createRelease({

@@ -3,6 +3,8 @@ import octokit from '../octokit';
 import { sendSlackMarkdownMessages } from '../slack';
 import { GithubEvent, PushEvent } from '../types';
 
+export const name = 'notifyDeployment';
+
 export const shouldRun = async (payload: GithubEvent): Promise<boolean> => {
 	if (!isPush(payload)) {
 		return false;

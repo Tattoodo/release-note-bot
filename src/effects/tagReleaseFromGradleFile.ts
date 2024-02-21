@@ -9,6 +9,8 @@ import { PullRequestEvent, PushEvent } from '../types';
 
 const enabledForRepos = ['app-android'];
 
+export const name = 'tagReleaseFromGradleFile';
+
 export const shouldRun = async (payload: PullRequestEvent): Promise<boolean> => {
 	if (!isPush(payload)) {
 		return false;

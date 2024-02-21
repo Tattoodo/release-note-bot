@@ -36,7 +36,7 @@ export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyRes
 			effects.map(async (effect) => {
 				const shouldRun = await effect.shouldRun(payload);
 				if (!shouldRun) {
-					return;
+					return `Skipped ${effect.name} effect`;
 				}
 
 				try {

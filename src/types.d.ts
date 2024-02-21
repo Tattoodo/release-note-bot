@@ -50,4 +50,5 @@ export type GithubEvent = PushEvent | PullRequestEvent;
 interface WebhookEffect {
 	shouldRun: (payload: GithubEvent) => Promise<boolean>;
 	run: (payload: GithubEvent) => Promise<void | string>;
+	name: string;
 }

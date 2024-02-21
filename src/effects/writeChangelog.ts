@@ -12,6 +12,8 @@ import { GithubEvent, PullRequestEvent } from '../types';
 import { RestEndpointMethodTypes } from '@octokit/rest';
 import octokit from '../octokit';
 
+export const name = 'writeChangelog';
+
 const changelogTriggerActions = ['opened', 'reopened', 'synchronize'];
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
