@@ -6,7 +6,7 @@ import * as TagRelease from './effects/tagRelease';
 import * as NotifyDeploymentInSlack from './effects/notifyDeploymentInSlack';
 import * as TagReleaseFromGradleFileEffect from './effects/tagReleaseFromGradleFile';
 
-const response = (message: string, statusCode = 200): APIGatewayProxyResult => ({
+const response = (message: string | string[], statusCode = 200): APIGatewayProxyResult => ({
 	statusCode,
 	body: JSON.stringify({ message }, null, 2)
 });
@@ -48,8 +48,8 @@ export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyRes
 			})
 		);
 
-		const messages = maybeMessages.filter((maybeMessage) => Boolean(maybeMessage));
-		const output = ['Processed', ...messages].filter((message) => Boolean(message)).join('\n');
+		const messages = maybeMessages.filter((maybeMessage) => Boolean(maybeMessage)) as string[];
+		const output = ['Processed', ...messages].filter((message) => Boolean(message));
 
 		return response(output);
 	} catch (error) {
