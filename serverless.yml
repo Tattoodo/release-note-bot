@@ -67,11 +67,11 @@ functions:
   ping:
     handler: dist/ping.handle
     events:
-      - http: GET /ping
+      - http: GET /
   webhook:
     handler: dist/webhook.handle
     events:
-      - http: POST /webhook
+      - http: POST /
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
