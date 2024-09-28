@@ -20,12 +20,13 @@ type VersionObject = {
 	patch: number;
 };
 
-const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web', 'image-lambda'];
+const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web', 'image-lambda', 'proxy-lambda'];
 const repoVersioningDefaults: Record<string, keyof VersionObject> = {
 	'tattoodo-web': 'minor',
 	'backend-api': 'minor',
 	'api-node-nest': 'minor',
-	'image-lambda': 'minor'
+	'image-lambda': 'minor',
+	'proxy-lambda': 'minor'
 };
 const fallbackBumpKey = 'minor';
 
