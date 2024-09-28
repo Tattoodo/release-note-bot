@@ -17,9 +17,6 @@ service: release-note-bot # NOTE: update this with your service name
 # Check out our docs for more details
 # frameworkVersion: "=X.X.X"
 
-plugins:
-  - serverless-ignore
-
 provider:
   name: aws
   runtime: nodejs18.x
@@ -54,7 +51,11 @@ provider:
 #    variable1: value1
 
 # you can add packaging information here
-#package:
+package:
+  patterns:
+    - '!*'
+    - '!*/*'
+    - 'dist/**'
 #  include:
 #    - include-me.js
 #    - include-me-dir/**
