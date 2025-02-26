@@ -55,10 +55,14 @@ const mappingJsonFile = /^src\/config\/elasticsearch\/mappings\/\w+.json$/;
 const mappingJsonNotice = '**Notice:** Elastic mappings has change. Ensure production Elastic is updated!';
 const mappingJsonNoticeRe = new RegExp(`^${escapeRegExp(mappingJsonNotice)}$`, 'm');
 const hasMappingJsonChanged = async (owner: string, repo: string, pull_number: number) => {
-	const files = (await octokit.paginate(
-		octokit.pulls.listFiles.endpoint({ owner, repo, pull_number })
-	)) as RestEndpointMethodTypes['pulls']['listFiles']['response']['data'];
-	return files.some(({ filename }) => mappingJsonFile.test(filename));
+	try {
+		const files = (await octokit.paginate(
+			octokit.pulls.listFiles.endpoint({ owner, repo, pull_number })
+		)) as RestEndpointMethodTypes['pulls']['listFiles']['response']['data'];
+		return files.some(({ filename }) => mappingJsonFile.test(filename));
+	} catch (e) {
+		return false;
+	}
 };
 
 const stripGeneratedContent = (body: string) => body.replace(changesRe, '').replace(mappingJsonNoticeRe, '').trim();
