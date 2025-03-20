@@ -7,14 +7,7 @@ import { isBranchProduction, isBranchStaging, isPullRequest, isRegularRelease } 
 import octokit from '../octokit';
 import { PullRequestEvent } from '../types';
 
-const enabledForRepos = [
-	'api-node-nest',
-	'backend-api',
-	'tattoodo-web',
-	'image-lambda',
-	'proxy-lambda',
-	'api-node-socket'
-];
+const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web', 'image-lambda', 'proxy-lambda', 'socket-node'];
 const changelogTriggerActions = ['opened'];
 
 export const name = 'renameTitle';
