@@ -34,7 +34,7 @@ export const run = async (payload: PushEvent): Promise<string | void> => {
 		owner,
 		repo,
 		ref: branchName,
-		path: 'app/build.gradle'
+		path: 'app/build.gradle.kts'
 	});
 
 	if (!data || !('type' in data) || data.type !== 'file') {
@@ -42,7 +42,7 @@ export const run = async (payload: PushEvent): Promise<string | void> => {
 	}
 
 	const trueContent = Buffer.from(data.content, 'base64').toString();
-	const extractedVersion = trueContent.match(/versionName\s"(.*)"/)?.[1];
+	const extractedVersion = trueContent.match(/versionName\s=\s"(.*)"/)?.[1];
 
 	if (!extractedVersion) {
 		return;
