@@ -7,6 +7,7 @@
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda';
 import * as Shortcut from './shortcut';
 import * as Github from './github';
+import { verifyPRQAStatus } from './qaVerification';
 
 const response = (message: string, statusCode = 200): APIGatewayProxyResult => ({
 	statusCode,
@@ -38,53 +39,6 @@ interface ShortcutWebhookPayload {
 	}>;
 }
 
-const reverifyPRForStory = async (owner: string, repo: string, prNumber: number, storyId: number): Promise<void> => {
-	console.log(`Re-verifying PR #${prNumber} in ${owner}/${repo} for story sc-${storyId}`);
-
-	try {
-		const commitMessages = await Github.listPrCommitMessages(owner, repo, prNumber);
-		
-		const { data: pr } = await require('./octokit').default.pulls.get({ owner, repo, pull_number: prNumber });
-		const storyIds = Shortcut.extractStoryIdsFromBranchAndMessages(pr.head.ref, commitMessages);
-
-		if (storyIds.length === 0) {
-			console.log(`No stories found in PR #${prNumber}, removing label if present`);
-			await Github.removeLabelIfPresent(owner, repo, prNumber, Github.UNTESTED_LABEL);
-			return;
-		}
-
-		const stories = await Promise.all(storyIds.map((id) => Shortcut.fetchStory(id)));
-		const validStories = stories.filter((story): story is Shortcut.ShortcutStory => story !== null);
-
-		if (validStories.length === 0) {
-			console.log(`No valid stories could be fetched for PR #${prNumber}`);
-			await Github.addLabelIfMissing(owner, repo, prNumber, Github.UNTESTED_LABEL);
-			return;
-		}
-
-		const allStoriesReady = validStories.every(
-			(story) => story.workflow_state_id === Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID
-		);
-
-		if (allStoriesReady) {
-			console.log(`All stories in PR #${prNumber} are ready to ship`);
-			await Github.removeLabelIfPresent(owner, repo, prNumber, Github.UNTESTED_LABEL);
-		} else {
-			const notReadyStories = validStories.filter(
-				(story) => story.workflow_state_id !== Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID
-			);
-			console.log(
-				`PR #${prNumber} has ${notReadyStories.length} stories not ready: ${notReadyStories
-					.map((s) => `sc-${s.id}`)
-					.join(', ')}`
-			);
-			await Github.addLabelIfMissing(owner, repo, prNumber, Github.UNTESTED_LABEL);
-		}
-	} catch (error) {
-		console.error(`Error re-verifying PR #${prNumber}:`, error);
-	}
-};
-
 export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
 	if (!event.body) {
 		return response('No body provided', 400);
@@ -115,7 +69,7 @@ export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyRes
 
 				const prs = await Github.searchOpenProductionPrsByStoryId(storyId);
 
-				await Promise.all(prs.map((pr) => reverifyPRForStory(pr.owner, pr.repo, pr.number, storyId)));
+				await Promise.all(prs.map((pr) => verifyPRQAStatus(pr)));
 
 				return response(`Re-verified ${prs.length} PRs for story sc-${storyId}`);
 			}
