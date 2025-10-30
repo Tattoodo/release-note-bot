@@ -24,7 +24,7 @@ export const verifyPRQAStatus = async (pr: {
 		owner,
 		repo,
 		Github.UNTESTED_LABEL,
-		'e11d21',
+		'ff4848',
 		"PR contains stories that have not been QA'd"
 	);
 
