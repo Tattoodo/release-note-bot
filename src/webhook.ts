@@ -1,6 +1,5 @@
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { PullRequestEvent, WebhookEffect } from './types';
-import * as WriteChangelog from './effects/writeChangelog';
 import * as RenameTitle from './effects/renameTitle';
 import * as TagRelease from './effects/tagRelease';
 import * as NotifyDeploymentInSlack from './effects/notifyDeploymentInSlack';
@@ -13,7 +12,6 @@ const response = (message: string | string[], statusCode = 200): APIGatewayProxy
 });
 
 const effects: WebhookEffect[] = [
-	WriteChangelog,
 	RenameTitle,
 	TagRelease,
 	NotifyDeploymentInSlack,

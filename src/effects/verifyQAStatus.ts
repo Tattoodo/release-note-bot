@@ -1,13 +1,12 @@
 /**
- * This effect verifies that all Shortcut stories referenced in a pull request
- * have been properly QA'd before merging to production.
+ * This effect updates PR descriptions with Shortcut story lists and verifies QA status.
  *
- * When a PR targets production, it checks if all stories are in "Ready to ship" state.
- * If any story is not ready, it adds an 'untested' label to the PR.
- * If all stories are ready, it removes the 'untested' label (if present).
+ * For staging PRs: Updates description with simple story list format.
+ * For production PRs: Updates description with QA status indicators (✅/🚫),
+ * verifies all stories are in "Ready to ship" state, and manages the 'untested' label.
  */
 
-import { isBranchProduction, isPullRequest } from '../helpers';
+import { isBranchProduction, isBranchStaging, isPullRequest } from '../helpers';
 import { GithubEvent, PullRequestEvent } from '../types';
 import { verifyPRQAStatus } from '../qaVerification';
 
@@ -23,7 +22,9 @@ export const shouldRun = async (payload: GithubEvent): Promise<boolean> => {
 	const { action, pull_request } = payload;
 	const branchName = pull_request.base.ref;
 
-	return verifyQAStatusTriggerActions.includes(action) && isBranchProduction(branchName);
+	return (
+		verifyQAStatusTriggerActions.includes(action) && (isBranchProduction(branchName) || isBranchStaging(branchName))
+	);
 };
 
 export const run = async (payload: PullRequestEvent): Promise<string> => {
