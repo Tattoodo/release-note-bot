@@ -16,12 +16,12 @@ export interface QAVerificationResult {
 	notReady: number[];
 }
 
+const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const changesRe = /^```\r?\n(.*\r?\n)*```/;
 const mappingJsonFile = /^src\/config\/elasticsearch\/mappings\/\w+.json$/;
 const mappingJsonNotice = '**Notice:** Elastic mappings has change. Ensure production Elastic is updated!';
 const mappingJsonNoticeRe = new RegExp(`^${escapeRegExp(mappingJsonNotice)}$`, 'm');
-
-const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const stripGeneratedContent = (body: string) => body.replace(changesRe, '').replace(mappingJsonNoticeRe, '').trim();
 
