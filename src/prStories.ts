@@ -42,7 +42,7 @@ const hasMappingJsonChanged = async (owner: string, repo: string, pull_number: n
 	return hasMappingChanged;
 };
 
-export const verifyPRQAStatus = async (pr: {
+export const updatePrStoriesAndQaStatus = async (pr: {
 	owner: string;
 	repo: string;
 	number: number;

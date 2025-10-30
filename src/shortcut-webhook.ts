@@ -7,7 +7,7 @@
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda';
 import * as Shortcut from './shortcut';
 import * as Github from './github';
-import { verifyPRQAStatus } from './qaVerification';
+import { updatePrStoriesAndQaStatus } from './prStories';
 
 const response = (message: string, statusCode = 200): APIGatewayProxyResult => ({
 	statusCode,
@@ -73,7 +73,7 @@ export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyRes
 
 				const prs = await Github.searchOpenProductionPrsByStoryId(storyId);
 
-				await Promise.all(prs.map((pr) => verifyPRQAStatus(pr)));
+				await Promise.all(prs.map((pr) => updatePrStoriesAndQaStatus(pr)));
 
 				return response(`Re-verified ${prs.length} PRs for story sc-${storyId}`);
 			}

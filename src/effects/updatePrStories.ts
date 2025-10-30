@@ -8,9 +8,9 @@
 
 import { isBranchProduction, isBranchStaging, isPullRequest } from '../helpers';
 import { GithubEvent, PullRequestEvent } from '../types';
-import { verifyPRQAStatus } from '../qaVerification';
+import { updatePrStoriesAndQaStatus } from '../prStories';
 
-export const name = 'verifyQAStatus';
+export const name = 'updatePrStories';
 
 const verifyQAStatusTriggerActions = ['opened', 'reopened', 'synchronize'];
 
@@ -33,10 +33,10 @@ export const run = async (payload: PullRequestEvent): Promise<string> => {
 		const repo = payload.repository.name;
 		const number = payload.number;
 
-		await verifyPRQAStatus({ owner, repo, number });
-		return `Verified QA status for PR #${number}`;
+		await updatePrStoriesAndQaStatus({ owner, repo, number });
+		return `Updated PR stories and QA status for PR #${number}`;
 	} catch (error) {
-		console.error('Error in verifyQAStatus effect:', error);
-		return `Error verifying QA status: ${error.message}`;
+		console.error('Error in updatePrStories effect:', error);
+		return `Error updating PR stories: ${error.message}`;
 	}
 };
