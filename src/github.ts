@@ -80,13 +80,15 @@ export const getPrDetails = async (
 	owner: string,
 	repo: string,
 	pull_number: number
-): Promise<{ headRef: string; commitMessages: string[] } | null> => {
+): Promise<{ headRef: string; commitMessages: string[]; baseRef: string; body: string } | null> => {
 	try {
 		const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number });
 		const commitMessages = await listPrCommitMessages(owner, repo, pull_number);
 		return {
 			headRef: pr.head.ref,
-			commitMessages
+			commitMessages,
+			baseRef: pr.base.ref,
+			body: pr.body || ''
 		};
 	} catch (error) {
 		console.error(`Failed to get PR details for #${pull_number}:`, error);

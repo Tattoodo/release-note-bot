@@ -7,7 +7,7 @@
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda';
 import * as Shortcut from './shortcut';
 import * as Github from './github';
-import { verifyPRQAStatus } from './qaVerification';
+import { updatePrStoriesAndQaStatus } from './prStories';
 
 const response = (message: string, statusCode = 200): APIGatewayProxyResult => ({
 	statusCode,
@@ -63,13 +63,17 @@ export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyRes
 
 			console.log(`Story workflow state changed from ${oldStateId} to ${newStateId}`);
 
-			if (oldStateId === Shortcut.QA_WORKFLOW_STATE_ID && newStateId === Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID) {
+			const relevantStates = [Shortcut.QA_WORKFLOW_STATE_ID, Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID];
+			const movedToRelevantState = relevantStates.includes(newStateId);
+			const movedFromRelevantState = relevantStates.includes(oldStateId);
+
+			if (movedToRelevantState || movedFromRelevantState) {
 				const storyId = action.id;
-				console.log(`Story sc-${storyId} moved from QA to Ready to ship, triggering re-verification`);
+				console.log(`Story sc-${storyId} moved to/from QA or Ready to ship state, triggering re-verification`);
 
 				const prs = await Github.searchOpenProductionPrsByStoryId(storyId);
 
-				await Promise.all(prs.map((pr) => verifyPRQAStatus(pr)));
+				await Promise.all(prs.map((pr) => updatePrStoriesAndQaStatus(pr)));
 
 				return response(`Re-verified ${prs.length} PRs for story sc-${storyId}`);
 			}

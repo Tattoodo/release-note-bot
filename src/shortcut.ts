@@ -39,13 +39,28 @@ export const storyRe = /^Merge pull request #\d+ from Tattoodo\/sc-(\d+)\//;
 
 export const extractStoryIdFromMessage = (message: string): string | undefined => (storyRe.exec(message) || [])[1];
 
+export const extractStoryIdsFromCommitMessage = (message: string): number[] => {
+	const ids: number[] = [];
+
+	const mergeMatch = storyRe.exec(message);
+	if (mergeMatch && mergeMatch[1]) {
+		ids.push(Number(mergeMatch[1]));
+	}
+
+	const bracketRe = /\[sc-(\d+)\]/gi;
+	let match;
+	while ((match = bracketRe.exec(message)) !== null) {
+		ids.push(Number(match[1]));
+	}
+
+	return ids;
+};
+
 export const extractStoryIdsFromBranchAndMessages = (headRef: string, messages: string[]): number[] => {
 	const storyIdFromRef = extractStoryIdFromRef(headRef);
-	const storyIds = [storyIdFromRef, ...messages.map((msg) => extractStoryIdFromMessage(msg))];
-	const storyIdsSorted = [...new Set(storyIds)]
-		.filter(Boolean)
-		.map(Number)
-		.sort((a, b) => a - b);
+	const storyIdsFromMessages = messages.flatMap((msg) => extractStoryIdsFromCommitMessage(msg));
+	const allStoryIds = storyIdFromRef ? [storyIdFromRef, ...storyIdsFromMessages] : storyIdsFromMessages;
+	const storyIdsSorted = [...new Set(allStoryIds)].sort((a, b) => a - b);
 
 	return storyIdsSorted;
 };
