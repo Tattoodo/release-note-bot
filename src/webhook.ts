@@ -5,6 +5,7 @@ import * as RenameTitle from './effects/renameTitle';
 import * as TagRelease from './effects/tagRelease';
 import * as NotifyDeploymentInSlack from './effects/notifyDeploymentInSlack';
 import * as TagReleaseFromGradleFileEffect from './effects/tagReleaseFromGradleFile';
+import * as VerifyQAStatus from './effects/verifyQAStatus';
 
 const response = (message: string | string[], statusCode = 200): APIGatewayProxyResult => ({
 	statusCode,
@@ -16,7 +17,8 @@ const effects: WebhookEffect[] = [
 	RenameTitle,
 	TagRelease,
 	NotifyDeploymentInSlack,
-	TagReleaseFromGradleFileEffect
+	TagReleaseFromGradleFileEffect,
+	VerifyQAStatus
 ];
 
 export async function handle(event: APIGatewayEvent): Promise<APIGatewayProxyResult> {
