@@ -29,3 +29,6 @@ The bot is automatically deployed using the [Serverless Framework](https://www.s
 
 ## Secrets
 All secrets are stored in AWS Parameter Store.
+
+## Verification
+This repository has been verified for access and functionality.
