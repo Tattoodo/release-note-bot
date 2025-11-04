@@ -1,4 +1,4 @@
-import { GithubEvent, IssueCommentEvent, PullRequestEvent, PushEvent } from './types';
+import { GithubEvent, PullRequestEvent, PushEvent } from './types';
 
 export const isBranchProduction = (branchName: string): boolean => {
 	return branchName === 'master' || branchName === 'main' || branchName === 'production';
@@ -38,12 +38,4 @@ export const isPush = (payload: GithubEvent): payload is PushEvent => {
 	}
 
 	return 'pusher' in payload;
-};
-
-export const isIssueComment = (payload: GithubEvent): payload is IssueCommentEvent => {
-	if (!payload) {
-		return false;
-	}
-
-	return 'comment' in payload && 'issue' in payload;
 };

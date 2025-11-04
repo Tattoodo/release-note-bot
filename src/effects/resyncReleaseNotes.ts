@@ -1,31 +1,27 @@
 /**
- * This effect handles "resync release notes" comments on PRs.
- * When triggered, it re-synchronizes the PR title, stories description, and label.
+ * This effect handles the "resync-notes" label on PRs.
+ * When triggered, it re-synchronizes the PR title, stories description, and untested label.
  */
 
-import { isBranchProduction, isBranchStaging, isIssueComment, isRegularRelease } from '../helpers';
-import { GithubEvent, IssueCommentEvent } from '../types';
+import { isBranchProduction, isBranchStaging, isPullRequest, isRegularRelease } from '../helpers';
+import { GithubEvent, PullRequestEvent } from '../types';
 import { updatePrStoriesAndQaStatus } from '../prStories';
 import octokit from '../octokit';
 
 export const name = 'resyncReleaseNotes';
 
-const RESYNC_COMMAND = /^\s*resync\s+release\s+notes\s*$/i;
+const RESYNC_LABEL = 'resync-notes';
 
 const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web', 'image-lambda', 'proxy-lambda', 'socket-node'];
 
 export const shouldRun = async (payload: GithubEvent): Promise<boolean> => {
-	if (!isIssueComment(payload)) {
+	if (!isPullRequest(payload)) {
 		return false;
 	}
 
-	const { action, comment, issue, repository } = payload;
+	const { action, pull_request, repository } = payload;
 
-	if (action !== 'created') {
-		return false;
-	}
-
-	if (!issue.pull_request) {
+	if (action !== 'labeled') {
 		return false;
 	}
 
@@ -33,7 +29,9 @@ export const shouldRun = async (payload: GithubEvent): Promise<boolean> => {
 		return false;
 	}
 
-	return RESYNC_COMMAND.test(comment.body);
+	const hasResyncLabel = pull_request.labels.some((label) => label.name === RESYNC_LABEL);
+
+	return hasResyncLabel;
 };
 
 const resyncPrTitle = async (owner: string, repo: string, prNumber: number, baseRef: string, headRef: string) => {
@@ -57,16 +55,13 @@ const resyncPrTitle = async (owner: string, repo: string, prNumber: number, base
 	});
 };
 
-export const run = async (payload: IssueCommentEvent): Promise<string> => {
+export const run = async (payload: PullRequestEvent): Promise<string> => {
 	try {
 		const owner = payload.organization.login;
 		const repo = payload.repository.name;
-		const prNumber = payload.issue.number;
-
-		const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
-
-		const baseRef = pr.base.ref;
-		const headRef = pr.head.ref;
+		const prNumber = payload.number;
+		const baseRef = payload.pull_request.base.ref;
+		const headRef = payload.pull_request.head.ref;
 
 		await resyncPrTitle(owner, repo, prNumber, baseRef, headRef);
 
