@@ -9,8 +9,9 @@
 
 import { isBranchProduction, isBranchStaging, isPullRequest } from '../helpers';
 import { GithubEvent, PullRequestEvent } from '../types';
-import { RestEndpointMethodTypes } from '@octokit/rest';
 import octokit from '../octokit';
+import * as Github from '../github';
+import * as Shortcut from '../shortcut';
 
 export const name = 'writeChangelog';
 
@@ -19,33 +20,12 @@ const changelogTriggerActions = ['opened', 'reopened', 'synchronize'];
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
 const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const refIsStory = (ref: string) => /^sc-(\d+)\/\D+$/.test(ref);
-const extractStoryIdFromRef = (ref: string) => (refIsStory(ref) ? Number(ref.match(/^sc-(\d+)\/\D+$/)?.[1]) : null);
-const storyRe = /^Merge pull request #\d+ from Tattoodo\/sc-(\d+)\//;
-const extractStoryId = (message: string) => (storyRe.exec(message) || [])[1];
-
-const storyUrl = (id: number) =>
-	`https://api.app.shortcut.com/api/v2/stories/${id}?token=${process.env.CLUBHOUSE_API_TOKEN}`;
-
-interface ShortcutStory {
-	id: number;
-	name: string;
-}
-const fetchStory = async (id: number): Promise<ShortcutStory> => fetch(storyUrl(id)).then((r) => r.json());
-
 const getChangeLog = async (owner: string, repositoryName: string, pullRequestNumber: number, headRef: string) => {
-	const commits = (await octokit.paginate(
-		octokit.pulls.listCommits.endpoint({ owner, repo: repositoryName, pull_number: pullRequestNumber })
-	)) as RestEndpointMethodTypes['pulls']['listCommits']['response']['data'];
-	const storyIdFromRef = extractStoryIdFromRef(headRef);
-	const storyIds = [storyIdFromRef, ...commits.map((c) => extractStoryId(c.commit.message))];
-	const storyIdsSorted = [...new Set(storyIds)]
-		.filter(Boolean)
-		.map(Number)
-		.sort((a, b) => a - b);
-	const lines = await Promise.all(
-		storyIdsSorted.map((id) => fetchStory(id).then((story) => `sc-${id}: ${story.name}`))
-	);
+	const commitMessages = await Github.listPrCommitMessages(owner, repositoryName, pullRequestNumber);
+	const storyIds = Shortcut.extractStoryIdsFromBranchAndMessages(headRef, commitMessages);
+	const stories = await Promise.all(storyIds.map((id) => Shortcut.fetchStory(id)));
+	const validStories = stories.filter((story): story is Shortcut.ShortcutStory => story !== null);
+	const lines = validStories.map((story) => `sc-${story.id}: ${story.name}`);
 	return ['```', ...lines, '```'].join('\n');
 };
 
