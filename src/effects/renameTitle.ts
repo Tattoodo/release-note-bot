@@ -3,9 +3,9 @@
  * to either "Production Release" or "Staging Release"
  */
 
-import { isBranchProduction, isBranchStaging, isPullRequest, isRegularRelease } from '../helpers';
-import octokit from '../octokit';
+import { isPullRequest, isRegularRelease } from '../helpers';
 import { PullRequestEvent } from '../types';
+import { updatePrTitle } from '../prTitle';
 
 const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web', 'image-lambda', 'proxy-lambda', 'socket-node'];
 const changelogTriggerActions = ['opened'];
@@ -27,19 +27,11 @@ export const shouldRun = async (payload: PullRequestEvent): Promise<boolean> => 
 };
 
 export const run = async (payload: PullRequestEvent): Promise<void> => {
-	const branchName = payload.pull_request.base.ref;
-	const isProductionRelease = isBranchProduction(branchName);
-	const isStagingRelease = isBranchStaging(branchName);
-
-	if (!isProductionRelease && !isStagingRelease) {
-		return;
-	}
-
-	const title = isProductionRelease ? `Production Release` : `Staging Release`;
-	await octokit.pulls.update({
-		owner: payload.organization.login,
-		repo: payload.repository.name,
-		pull_number: payload.number,
-		title
-	});
+	await updatePrTitle(
+		payload.organization.login,
+		payload.repository.name,
+		payload.number,
+		payload.pull_request.base.ref,
+		payload.pull_request.head.ref
+	);
 };

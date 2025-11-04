@@ -1,11 +1,13 @@
 /**
  * This effect handles the "resync-notes" label on PRs.
  * When triggered, it re-synchronizes the PR title, stories description, and untested label.
+ * After completion, the resync-notes label is automatically removed.
  */
 
-import { isBranchProduction, isBranchStaging, isPullRequest, isRegularRelease } from '../helpers';
+import { isPullRequest } from '../helpers';
 import { GithubEvent, PullRequestEvent } from '../types';
 import { updatePrStoriesAndQaStatus } from '../prStories';
+import { updatePrTitle } from '../prTitle';
 import octokit from '../octokit';
 
 export const name = 'resyncReleaseNotes';
@@ -34,27 +36,6 @@ export const shouldRun = async (payload: GithubEvent): Promise<boolean> => {
 	return hasResyncLabel;
 };
 
-const resyncPrTitle = async (owner: string, repo: string, prNumber: number, baseRef: string, headRef: string) => {
-	if (!isRegularRelease(baseRef, headRef)) {
-		return;
-	}
-
-	const isProductionRelease = isBranchProduction(baseRef);
-	const isStagingRelease = isBranchStaging(baseRef);
-
-	if (!isProductionRelease && !isStagingRelease) {
-		return;
-	}
-
-	const title = isProductionRelease ? 'Production Release' : 'Staging Release';
-	await octokit.pulls.update({
-		owner,
-		repo,
-		pull_number: prNumber,
-		title
-	});
-};
-
 export const run = async (payload: PullRequestEvent): Promise<string> => {
 	try {
 		const owner = payload.organization.login;
@@ -63,13 +44,20 @@ export const run = async (payload: PullRequestEvent): Promise<string> => {
 		const baseRef = payload.pull_request.base.ref;
 		const headRef = payload.pull_request.head.ref;
 
-		await resyncPrTitle(owner, repo, prNumber, baseRef, headRef);
+		await updatePrTitle(owner, repo, prNumber, baseRef, headRef);
 
 		await updatePrStoriesAndQaStatus({ owner, repo, number: prNumber });
+
+		await octokit.issues.removeLabel({
+			owner,
+			repo,
+			issue_number: prNumber,
+			name: RESYNC_LABEL
+		});
 
 		return `Resynced release notes for PR #${prNumber}`;
 	} catch (error) {
 		console.error('Error in resyncReleaseNotes effect:', error);
-		return `Error resyncing release notes: ${error.message}`;
+		return `Error resyncing release notes: ${error instanceof Error ? error.message : String(error)}`;
 	}
 };
