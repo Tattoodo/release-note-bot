@@ -68,7 +68,7 @@ export const removeLabelIfPresent = async (owner: string, repo: string, issue_nu
 
 export const listPrCommitMessages = async (owner: string, repo: string, pull_number: number): Promise<string[]> => {
 	try {
-		const { data: commits } = await octokit.pulls.listCommits({ owner, repo, pull_number });
+		const commits = await octokit.paginate(octokit.pulls.listCommits, { owner, repo, pull_number });
 		return commits.map((c) => c.commit.message);
 	} catch (error) {
 		console.error(`Failed to list commits for PR #${pull_number}:`, error);
