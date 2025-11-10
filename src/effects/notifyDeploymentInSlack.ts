@@ -1,6 +1,6 @@
 import { isBranchProduction, isBranchStaging, isPush } from '../helpers';
 import octokit from '../octokit';
-import { generateChangelogContent } from '../prStories';
+import { generateChangelogContent, hasMappingJsonChanged, mappingJsonNotice } from '../prStories';
 import { sendSlackMarkdownMessages } from '../slack';
 import { GithubEvent, PushEvent } from '../types';
 
@@ -18,42 +18,68 @@ export const shouldRun = async (payload: GithubEvent): Promise<boolean> => {
 
 export const run = async (payload: PushEvent): Promise<string> => {
 	const pullRequestNumberCommitOriginedFrom = payload.head_commit.message.match(/Merge pull request #(\d+) from/)?.[1];
-	const pullRequest = pullRequestNumberCommitOriginedFrom
-		? await octokit.pulls.get({
-				owner: payload.repository.owner.name,
-				repo: payload.repository.name,
-				pull_number: Number(pullRequestNumberCommitOriginedFrom)
-		  })
-		: null;
-
-	const url = pullRequest?.data?.html_url || payload?.head_commit?.url;
-	const commitTitle = pullRequest?.data?.title || payload?.head_commit?.message;
-	const commitHash = payload?.head_commit?.id?.substring(0, 7);
-	const changelog = await generateChangelogContent(
-		payload.repository.owner.name,
-		payload.repository.name,
-		Number(pullRequestNumberCommitOriginedFrom)
-	);
-	const bodyLines = changelog.map((story) => `${story.storyId}: ${story.storyName}`).join('\n');
-	const body = ['```', ...bodyLines, '```'].join('\n');
 
 	const branchName = payload.ref.split('refs/heads/')[1];
 	const isStagingRelease = isBranchStaging(branchName);
 	const isProductionRelease = isBranchProduction(branchName);
 
 	const title = `Releasing *${payload.repository.name}*`;
-
 	const webhookUrl = isProductionRelease
 		? process.env.RELEASE_SLACK_WEBHOOK_URL_PRODUCTION
 		: isStagingRelease
 		? process.env.RELEASE_SLACK_WEBHOOK_URL_STAGING
 		: null;
 
-	const messages = [title, `*<${url}|${commitTitle} (${commitHash})>*`, body ? `\n${body}` : ''].filter(Boolean);
-
 	if (!webhookUrl) {
 		return 'notifyDeployment: no webhook url found';
 	}
+
+	if (!pullRequestNumberCommitOriginedFrom) {
+		const url = payload?.head_commit?.url;
+		const commitTitle = payload?.head_commit?.message;
+		const commitHash = payload?.head_commit?.id?.substring(0, 7);
+		const messages = [title, `*<${url}|${commitTitle} (${commitHash})>*`].filter(Boolean);
+		await sendSlackMarkdownMessages(webhookUrl, messages);
+		return 'notifyDeployment: sent slack message (no PR found)';
+	}
+
+	const pullRequest = await octokit.pulls.get({
+		owner: payload.repository.owner.login,
+		repo: payload.repository.name,
+		pull_number: Number(pullRequestNumberCommitOriginedFrom)
+	});
+
+	const url = pullRequest?.data?.html_url || payload?.head_commit?.url;
+	const commitTitle = pullRequest?.data?.title || payload?.head_commit?.message;
+	const commitHash = payload?.head_commit?.id?.substring(0, 7);
+
+	const changelog = await generateChangelogContent(
+		payload.repository.owner.login,
+		payload.repository.name,
+		Number(pullRequestNumberCommitOriginedFrom)
+	);
+
+	const bodyLines = changelog
+		.map((story) => {
+			const indicator = story.indicator ? `${story.indicator} ` : '';
+			return `${indicator}<${story.storyUrl}|${story.storyId}>: ${story.storyName}`;
+		})
+		.join('\n');
+
+	const body = bodyLines ? ['```', bodyLines, '```'].join('\n') : '';
+
+	const showMappingNotice = await hasMappingJsonChanged(
+		payload.repository.owner.login,
+		payload.repository.name,
+		Number(pullRequestNumberCommitOriginedFrom)
+	);
+
+	const messages = [
+		title,
+		`*<${url}|${commitTitle} (${commitHash})>*`,
+		body ? `\n${body}` : '',
+		showMappingNotice ? `\n${mappingJsonNotice}` : ''
+	].filter(Boolean);
 
 	await sendSlackMarkdownMessages(webhookUrl, messages);
 	return 'notifyDeployment: sent slack message';

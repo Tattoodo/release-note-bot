@@ -18,14 +18,16 @@ export interface QAVerificationResult {
 
 const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const changesRe = /^```\r?\n(.*\r?\n)*```/;
+const changelogStartMarker = '<!-- changelog-start -->';
+const changelogEndMarker = '<!-- changelog-end -->';
+const changesRe = new RegExp(`${escapeRegExp(changelogStartMarker)}[\\s\\S]*?${escapeRegExp(changelogEndMarker)}`, 'g');
 const mappingJsonFile = /^src\/config\/elasticsearch\/mappings\/\w+.json$/;
-const mappingJsonNotice = '**Notice:** Elastic mappings has change. Ensure production Elastic is updated!';
+export const mappingJsonNotice = '**Notice:** Elastic mappings has change. Ensure production Elastic is updated!';
 const mappingJsonNoticeRe = new RegExp(`^${escapeRegExp(mappingJsonNotice)}$`, 'm');
 
 const stripGeneratedContent = (body: string) => body.replace(changesRe, '').replace(mappingJsonNoticeRe, '').trim();
 
-const hasMappingJsonChanged = async (owner: string, repo: string, pull_number: number): Promise<boolean> => {
+export const hasMappingJsonChanged = async (owner: string, repo: string, pull_number: number): Promise<boolean> => {
 	const per_page = 24;
 	let page = 1;
 	let hasMappingChanged = false;
@@ -42,11 +44,19 @@ const hasMappingJsonChanged = async (owner: string, repo: string, pull_number: n
 	return hasMappingChanged;
 };
 
+export interface ChangelogItem {
+	indicator?: string;
+	storyId: string;
+	storyUrl: string;
+	storyName: string;
+	story: Shortcut.ShortcutStory;
+}
+
 export const generateChangelogContent = async (
 	owner: string,
 	repo: string,
 	prNumber: number
-): Promise<{ indicator?: string; storyId: string; storyUrl: string; storyName: string }[]> => {
+): Promise<ChangelogItem[]> => {
 	const prDetailsFromApi = await Github.getPrDetails(owner, repo, prNumber);
 	if (!prDetailsFromApi) {
 		console.error(`Failed to get PR details for #${prNumber} in ${owner}/${repo}`);
@@ -78,7 +88,8 @@ export const generateChangelogContent = async (
 				: undefined,
 			storyId: `sc-${story.id}`,
 			storyUrl: Shortcut.getStoryWebUrl(story.id),
-			storyName: story.name
+			storyName: story.name,
+			story
 		};
 	});
 };
@@ -128,12 +139,12 @@ export const updatePrStoriesAndQaStatus = async (pr: {
 
 	const changelogContent = await generateChangelogContent(owner, repo, prNumber);
 	const changeLogFormatted = changelogContent
-		.map((story) => {
-			return [story.indicator, `[${story.storyId}](${story.storyUrl}):`, story.storyName].filter(Boolean).join(' ');
+		.map((item) => {
+			return [item.indicator, `[${item.storyId}](${item.storyUrl}):`, item.storyName].filter(Boolean).join(' ');
 		})
 		.join('\n');
 
-	if (changeLogFormatted.length === 0) {
+	if (changelogContent.length === 0) {
 		console.log(`No valid stories could be fetched for PR #${prNumber} in ${owner}/${repo}`);
 
 		if (isProduction) {
@@ -143,14 +154,10 @@ export const updatePrStoriesAndQaStatus = async (pr: {
 		return { ready: false, storyIds, notReady: storyIds };
 	}
 
-	const stories = await Promise.all(storyIds.map((id) => Shortcut.fetchStory(id)));
-	const validStories = stories.filter((story): story is Shortcut.ShortcutStory => story !== null);
+	const validStories = changelogContent.map((item) => item.story);
 
-	const bodyParts = [
-		changeLogFormatted,
-		showMappingNotice && mappingJsonNotice,
-		stripGeneratedContent(currentBody || '')
-	]
+	const wrappedChangelog = [changelogStartMarker, changeLogFormatted, changelogEndMarker].join('\n');
+	const bodyParts = [wrappedChangelog, showMappingNotice && mappingJsonNotice, stripGeneratedContent(currentBody || '')]
 		.filter(Boolean)
 		.join('\n\n');
 
