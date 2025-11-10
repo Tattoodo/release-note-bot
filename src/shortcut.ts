@@ -64,3 +64,7 @@ export const extractStoryIdsFromBranchAndMessages = (headRef: string, messages: 
 
 	return storyIdsSorted;
 };
+
+export const getStoryWebUrl = (id: number): string => {
+	return `https://app.shortcut.com/tattoodo/story/${id}`;
+};

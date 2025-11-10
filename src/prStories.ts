@@ -18,14 +18,16 @@ export interface QAVerificationResult {
 
 const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const changesRe = /^```\r?\n(.*\r?\n)*```/;
+const changelogStartMarker = '<!-- changelog-start -->';
+const changelogEndMarker = '<!-- changelog-end -->';
+const changesRe = new RegExp(`${escapeRegExp(changelogStartMarker)}[\\s\\S]*?${escapeRegExp(changelogEndMarker)}`, 'g');
 const mappingJsonFile = /^src\/config\/elasticsearch\/mappings\/\w+.json$/;
-const mappingJsonNotice = '**Notice:** Elastic mappings has change. Ensure production Elastic is updated!';
+export const mappingJsonNotice = '**Notice:** Elastic mappings has change. Ensure production Elastic is updated!';
 const mappingJsonNoticeRe = new RegExp(`^${escapeRegExp(mappingJsonNotice)}$`, 'm');
 
 const stripGeneratedContent = (body: string) => body.replace(changesRe, '').replace(mappingJsonNoticeRe, '').trim();
 
-const hasMappingJsonChanged = async (owner: string, repo: string, pull_number: number): Promise<boolean> => {
+export const hasMappingJsonChanged = async (owner: string, repo: string, pull_number: number): Promise<boolean> => {
 	const per_page = 24;
 	let page = 1;
 	let hasMappingChanged = false;
@@ -40,6 +42,56 @@ const hasMappingJsonChanged = async (owner: string, repo: string, pull_number: n
 	}
 
 	return hasMappingChanged;
+};
+
+export interface ChangelogItem {
+	indicator?: string;
+	storyId: string;
+	storyUrl: string;
+	storyName: string;
+	story: Shortcut.ShortcutStory;
+}
+
+export const generateChangelogContent = async (
+	owner: string,
+	repo: string,
+	prNumber: number
+): Promise<ChangelogItem[]> => {
+	const prDetailsFromApi = await Github.getPrDetails(owner, repo, prNumber);
+	if (!prDetailsFromApi) {
+		console.error(`Failed to get PR details for #${prNumber} in ${owner}/${repo}`);
+		return [];
+	}
+
+	const { headRef, commitMessages, baseRef } = prDetailsFromApi;
+	const isProduction = isBranchProduction(baseRef);
+
+	const storyIds = Shortcut.extractStoryIdsFromBranchAndMessages(headRef, commitMessages);
+
+	if (storyIds.length === 0) {
+		return [];
+	}
+
+	const stories = await Promise.all(storyIds.map((id) => Shortcut.fetchStory(id)));
+	const validStories = stories.filter((story): story is Shortcut.ShortcutStory => story !== null);
+
+	if (validStories.length === 0) {
+		return [];
+	}
+
+	return validStories.map((story) => {
+		return {
+			indicator: isProduction
+				? story.workflow_state_id === Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID
+					? '✅'
+					: '🚫'
+				: undefined,
+			storyId: `sc-${story.id}`,
+			storyUrl: Shortcut.getStoryWebUrl(story.id),
+			storyName: story.name,
+			story
+		};
+	});
 };
 
 export const updatePrStoriesAndQaStatus = async (pr: {
@@ -73,46 +125,39 @@ export const updatePrStoriesAndQaStatus = async (pr: {
 
 	if (storyIds.length === 0) {
 		console.log(`No Shortcut stories found in PR #${prNumber} in ${owner}/${repo}`);
-		
+
 		const cleanedBody = stripGeneratedContent(currentBody || '');
 		if (cleanedBody !== (currentBody || '').trim()) {
 			await octokit.pulls.update({ owner, repo, pull_number: prNumber, body: cleanedBody });
 		}
-		
+
 		await Github.removeLabelIfPresent(owner, repo, prNumber, Github.UNTESTED_LABEL);
 		return { ready: true, storyIds: [], notReady: [] };
 	}
 
 	console.log(`Found ${storyIds.length} story IDs in PR #${prNumber} in ${owner}/${repo}: ${storyIds.join(', ')}`);
 
-	const stories = await Promise.all(storyIds.map((id) => Shortcut.fetchStory(id)));
-	const validStories = stories.filter((story): story is Shortcut.ShortcutStory => story !== null);
+	const changelogContent = await generateChangelogContent(owner, repo, prNumber);
+	const changeLogFormatted = changelogContent
+		.map((item) => {
+			return [item.indicator, `[${item.storyId}](${item.storyUrl}):`, item.storyName].filter(Boolean).join(' ');
+		})
+		.join('\n');
 
-	if (validStories.length === 0) {
+	if (changelogContent.length === 0) {
 		console.log(`No valid stories could be fetched for PR #${prNumber} in ${owner}/${repo}`);
-		
+
 		if (isProduction) {
 			await Github.addLabelIfMissing(owner, repo, prNumber, Github.UNTESTED_LABEL);
 		}
-		
+
 		return { ready: false, storyIds, notReady: storyIds };
 	}
 
-	let changelogContent: string;
-	
-	if (isProduction) {
-		const lines = validStories.map((story) => {
-			const isReady = story.workflow_state_id === Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID;
-			const indicator = isReady ? '✅' : '🚫';
-			return `${indicator} sc-${story.id}: ${story.name}`;
-		});
-		changelogContent = ['```', ...lines, '```'].join('\n');
-	} else {
-		const lines = validStories.map((story) => `sc-${story.id}: ${story.name}`);
-		changelogContent = ['```', ...lines, '```'].join('\n');
-	}
+	const validStories = changelogContent.map((item) => item.story);
 
-	const bodyParts = [changelogContent, showMappingNotice && mappingJsonNotice, stripGeneratedContent(currentBody || '')]
+	const wrappedChangelog = [changelogStartMarker, changeLogFormatted, changelogEndMarker].join('\n');
+	const bodyParts = [wrappedChangelog, showMappingNotice && mappingJsonNotice, stripGeneratedContent(currentBody || '')]
 		.filter(Boolean)
 		.join('\n\n');
 
@@ -131,9 +176,9 @@ export const updatePrStoriesAndQaStatus = async (pr: {
 			return { ready: true, storyIds, notReady: [] };
 		} else {
 			console.log(
-				`PR #${prNumber} in ${owner}/${repo} has ${notReadyStories.length} stories not in "Ready to ship" state: ${notReadyStories
-					.map((s) => `sc-${s.id}`)
-					.join(', ')}`
+				`PR #${prNumber} in ${owner}/${repo} has ${
+					notReadyStories.length
+				} stories not in "Ready to ship" state: ${notReadyStories.map((s) => `sc-${s.id}`).join(', ')}`
 			);
 			await Github.addLabelIfMissing(owner, repo, prNumber, Github.UNTESTED_LABEL);
 			return { ready: false, storyIds, notReady: notReadyStories.map((s) => s.id) };
