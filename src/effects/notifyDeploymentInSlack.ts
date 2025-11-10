@@ -34,7 +34,7 @@ export const run = async (payload: PushEvent): Promise<string> => {
 		payload.repository.name,
 		Number(pullRequestNumberCommitOriginedFrom)
 	);
-	const bodyLines = changelog.map((story) => `${story.storyName}: ${story.storyName}`).join('\n');
+	const bodyLines = changelog.map((story) => `${story.storyId}: ${story.storyName}`).join('\n');
 	const body = ['```', ...bodyLines, '```'].join('\n');
 
 	const branchName = payload.ref.split('refs/heads/')[1];
