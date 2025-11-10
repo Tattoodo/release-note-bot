@@ -140,7 +140,13 @@ export const updatePrStoriesAndQaStatus = async (pr: {
 	const changelogContent = await generateChangelogContent(owner, repo, prNumber);
 	const changeLogFormatted = changelogContent
 		.map((item) => {
-			return [item.indicator, `[${item.storyId}](${item.storyUrl}):`, item.storyName].filter(Boolean).join(' ');
+			return [
+				item.indicator,
+				`<a href="${item.storyUrl}" target="_blank" rel="noopener noreferrer">${item.storyId}</a>:`,
+				item.storyName
+			]
+				.filter(Boolean)
+				.join(' ');
 		})
 		.join('\n');
 
