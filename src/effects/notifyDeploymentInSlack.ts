@@ -1,5 +1,6 @@
 import { isBranchProduction, isBranchStaging, isPush } from '../helpers';
 import octokit from '../octokit';
+import { generateChangelogContent } from '../prStories';
 import { sendSlackMarkdownMessages } from '../slack';
 import { GithubEvent, PushEvent } from '../types';
 
@@ -26,9 +27,15 @@ export const run = async (payload: PushEvent): Promise<string> => {
 		: null;
 
 	const url = pullRequest?.data?.html_url || payload?.head_commit?.url;
-	const body = pullRequest?.data?.body || '';
 	const commitTitle = pullRequest?.data?.title || payload?.head_commit?.message;
 	const commitHash = payload?.head_commit?.id?.substring(0, 7);
+	const changelog = await generateChangelogContent(
+		payload.repository.owner.name,
+		payload.repository.name,
+		Number(pullRequestNumberCommitOriginedFrom)
+	);
+	const bodyLines = changelog.map((story) => `${story.storyName}: ${story.storyName}`).join('\n');
+	const body = ['```', ...bodyLines, '```'].join('\n');
 
 	const branchName = payload.ref.split('refs/heads/')[1];
 	const isStagingRelease = isBranchStaging(branchName);
