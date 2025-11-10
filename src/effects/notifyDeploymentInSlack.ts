@@ -61,8 +61,7 @@ export const run = async (payload: PushEvent): Promise<string> => {
 
 	const bodyLines = changelog
 		.map((story) => {
-			const indicator = story.indicator ? `${story.indicator} ` : '';
-			return `${indicator}<${story.storyUrl}|${story.storyId}>: ${story.storyName}`;
+			return `<${story.storyUrl}|${story.storyId}>: ${story.storyName}`;
 		})
 		.join('\n');
 
