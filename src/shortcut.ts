@@ -30,12 +30,12 @@ export const fetchStory = async (id: number): Promise<ShortcutStory | null> => {
 	}
 };
 
-export const refIsStory = (ref: string): boolean => /^sc-(\d+)\/\D+$/.test(ref);
+export const refIsStory = (ref: string): boolean => /^sc-(\d+)\/.+$/.test(ref);
 
 export const extractStoryIdFromRef = (ref: string): number | null =>
-	refIsStory(ref) ? Number(ref.match(/^sc-(\d+)\/\D+$/)?.[1]) : null;
+	refIsStory(ref) ? Number(ref.match(/^sc-(\d+)\/.+$/)?.[1]) : null;
 
-export const storyRe = /^Merge pull request #\d+ from Tattoodo\/sc-(\d+)\//;
+export const storyRe = /sc-(\d+)\//;
 
 export const extractStoryIdFromMessage = (message: string): string | undefined => (storyRe.exec(message) || [])[1];
 
