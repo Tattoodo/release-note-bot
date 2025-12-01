@@ -25,7 +25,12 @@ const mappingJsonFile = /^src\/config\/elasticsearch\/mappings\/\w+.json$/;
 export const mappingJsonNotice = '**Notice:** Elastic mappings has change. Ensure production Elastic is updated!';
 const mappingJsonNoticeRe = new RegExp(`^${escapeRegExp(mappingJsonNotice)}$`, 'm');
 
-const stripGeneratedContent = (body: string) => body.replace(changesRe, '').replace(mappingJsonNoticeRe, '').trim();
+const shippedStoriesNoticePrefix = '**Stories ';
+const shippedStoriesNoticeSuffix = ' have already been shipped. Test these stories before merging.**';
+const shippedStoriesNoticeRe = /^\*\*Stories .+ have already been shipped\. Test these stories before merging\.\*\*$/m;
+
+const stripGeneratedContent = (body: string) =>
+	body.replace(changesRe, '').replace(mappingJsonNoticeRe, '').replace(shippedStoriesNoticeRe, '').trim();
 
 export const hasMappingJsonChanged = async (owner: string, repo: string, pull_number: number): Promise<boolean> => {
 	const per_page = 24;
@@ -50,6 +55,7 @@ export interface ChangelogItem {
 	storyUrl: string;
 	storyName: string;
 	story: Shortcut.ShortcutStory;
+	isShipped: boolean;
 }
 
 export const generateChangelogContent = async (
@@ -79,17 +85,29 @@ export const generateChangelogContent = async (
 		return [];
 	}
 
-	return validStories.map((story) => {
+	const shippedStatuses = await Promise.all(validStories.map((story) => Github.isStoryAlreadyShipped(story.id)));
+
+	return validStories.map((story, index) => {
+		const isShipped = shippedStatuses[index];
+		let indicator: string | undefined;
+
+		if (isProduction) {
+			if (isShipped) {
+				indicator = '🚢';
+			} else if (story.workflow_state_id === Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID) {
+				indicator = '✅';
+			} else {
+				indicator = '🚫';
+			}
+		}
+
 		return {
-			indicator: isProduction
-				? story.workflow_state_id === Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID
-					? '✅'
-					: '🚫'
-				: undefined,
+			indicator,
 			storyId: `sc-${story.id}`,
 			storyUrl: Shortcut.getStoryWebUrl(story.id),
 			storyName: story.name,
-			story
+			story,
+			isShipped
 		};
 	});
 };
@@ -160,34 +178,45 @@ export const updatePrStoriesAndQaStatus = async (pr: {
 		return { ready: false, storyIds, notReady: storyIds };
 	}
 
-	const validStories = changelogContent.map((item) => item.story);
+	const shippedStories = changelogContent.filter((item) => item.isShipped);
+	const shippedStoriesNotice =
+		shippedStories.length > 0
+			? shippedStoriesNoticePrefix +
+				shippedStories.map((item) => item.storyId).join(', ') +
+				shippedStoriesNoticeSuffix
+			: null;
 
 	const wrappedChangelog = [changelogStartMarker, changeLogFormatted, changelogEndMarker].join('\n');
-	const bodyParts = [wrappedChangelog, showMappingNotice && mappingJsonNotice, stripGeneratedContent(currentBody || '')]
+	const bodyParts = [
+		shippedStoriesNotice,
+		wrappedChangelog,
+		showMappingNotice && mappingJsonNotice,
+		stripGeneratedContent(currentBody || '')
+	]
 		.filter(Boolean)
 		.join('\n\n');
 
 	await octokit.pulls.update({ owner, repo, pull_number: prNumber, body: bodyParts });
 
 	if (isProduction) {
-		const notReadyStories = validStories.filter(
-			(story) => story.workflow_state_id !== Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID
+		const notReadyStories = changelogContent.filter(
+			(item) => !item.isShipped && item.story.workflow_state_id !== Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID
 		);
 
 		const allStoriesReady = notReadyStories.length === 0;
 
 		if (allStoriesReady) {
-			console.log(`All stories in PR #${prNumber} in ${owner}/${repo} are in "Ready to ship" state`);
+			console.log(`All stories in PR #${prNumber} in ${owner}/${repo} are in "Ready to ship" state or already shipped`);
 			await Github.removeLabelIfPresent(owner, repo, prNumber, Github.UNTESTED_LABEL);
 			return { ready: true, storyIds, notReady: [] };
 		} else {
 			console.log(
 				`PR #${prNumber} in ${owner}/${repo} has ${
 					notReadyStories.length
-				} stories not in "Ready to ship" state: ${notReadyStories.map((s) => `sc-${s.id}`).join(', ')}`
+				} stories not in "Ready to ship" state: ${notReadyStories.map((item) => item.storyId).join(', ')}`
 			);
 			await Github.addLabelIfMissing(owner, repo, prNumber, Github.UNTESTED_LABEL);
-			return { ready: false, storyIds, notReady: notReadyStories.map((s) => s.id) };
+			return { ready: false, storyIds, notReady: notReadyStories.map((item) => item.story.id) };
 		}
 	}
 

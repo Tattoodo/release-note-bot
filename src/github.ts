@@ -135,3 +135,25 @@ export const searchOpenProductionPrsByStoryId = async (storyId: number): Promise
 	console.log(`Found ${results.length} open PRs to production branches referencing story sc-${storyId}`);
 	return results;
 };
+
+export const isStoryAlreadyShipped = async (storyId: number): Promise<boolean> => {
+	for (const baseBranch of PRODUCTION_BRANCHES) {
+		const searchQuery = `org:Tattoodo is:pr is:merged base:${baseBranch} sc-${storyId}`;
+
+		try {
+			const { data } = await octokit.search.issuesAndPullRequests({
+				q: searchQuery,
+				per_page: 1
+			});
+
+			if (data.total_count > 0) {
+				console.log(`Story sc-${storyId} has already been shipped (found in merged PR to ${baseBranch})`);
+				return true;
+			}
+		} catch (error) {
+			console.error(`Error searching for merged PRs with base:${baseBranch} referencing story ${storyId}:`, error);
+		}
+	}
+
+	return false;
+};
