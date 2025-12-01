@@ -16,6 +16,12 @@ export interface QAVerificationResult {
 	notReady: number[];
 }
 
+const STORY_EMOJIS = {
+	untested: '🚫',
+	ready: '✅',
+	shipped: '🚢'
+};
+
 const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const changelogStartMarker = '<!-- changelog-start -->';
@@ -93,11 +99,11 @@ export const generateChangelogContent = async (
 
 		if (isProduction) {
 			if (isShipped) {
-				indicator = '🚢';
+				indicator = STORY_EMOJIS.shipped;
 			} else if (story.workflow_state_id === Shortcut.READY_TO_SHIP_WORKFLOW_STATE_ID) {
-				indicator = '✅';
+				indicator = STORY_EMOJIS.ready;
 			} else {
-				indicator = '🚫';
+				indicator = STORY_EMOJIS.untested;
 			}
 		}
 
