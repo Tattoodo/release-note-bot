@@ -72,6 +72,7 @@ functions:
           method: GET
   webhook:
     handler: dist/webhook.handle
+    timeout: 60
     events:
       - http:
           path: /webhook
