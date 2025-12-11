@@ -79,6 +79,7 @@ functions:
           method: POST
   shortcut-webhook:
     handler: dist/shortcut-webhook.handle
+    timeout: 60
     events:
       - http:
           path: /shortcut-webhook
