@@ -140,7 +140,12 @@ export const updatePrStoriesAndQaStatus = async (pr: {
 		return { ready: false, storyIds: [], notReady: [] };
 	}
 
-	const { headRef, commitMessages, baseRef, body: currentBody } = prDetailsFromApi;
+	const { headRef, commitMessages, baseRef, body: currentBody, merged } = prDetailsFromApi;
+
+	if (merged) {
+		console.log(`PR #${prNumber} in ${owner}/${repo} is merged. Skipping story updates.`);
+		return { ready: true, storyIds: [], notReady: [] };
+	}
 	const isProduction = isBranchProduction(baseRef);
 
 	const storyIds = Shortcut.extractStoryIdsFromBranchAndMessages(headRef, commitMessages);
@@ -187,9 +192,7 @@ export const updatePrStoriesAndQaStatus = async (pr: {
 	const shippedStories = changelogContent.filter((item) => item.isShipped);
 	const shippedStoriesNotice =
 		shippedStories.length > 0
-			? shippedStoriesNoticePrefix +
-				shippedStories.map((item) => item.storyId).join(', ') +
-				shippedStoriesNoticeSuffix
+			? shippedStoriesNoticePrefix + shippedStories.map((item) => item.storyId).join(', ') + shippedStoriesNoticeSuffix
 			: null;
 
 	const wrappedChangelog = [changelogStartMarker, changeLogFormatted, changelogEndMarker].join('\n');

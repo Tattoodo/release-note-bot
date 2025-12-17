@@ -36,7 +36,12 @@ export const ensureLabelExists = async (
 	}
 };
 
-export const addLabelIfMissing = async (owner: string, repo: string, issue_number: number, labelName: string): Promise<void> => {
+export const addLabelIfMissing = async (
+	owner: string,
+	repo: string,
+	issue_number: number,
+	labelName: string
+): Promise<void> => {
 	try {
 		const { data: currentLabels } = await octokit.issues.listLabelsOnIssue({ owner, repo, issue_number });
 		const hasLabel = currentLabels.some((label) => label.name === labelName);
@@ -50,7 +55,12 @@ export const addLabelIfMissing = async (owner: string, repo: string, issue_numbe
 	}
 };
 
-export const removeLabelIfPresent = async (owner: string, repo: string, issue_number: number, labelName: string): Promise<void> => {
+export const removeLabelIfPresent = async (
+	owner: string,
+	repo: string,
+	issue_number: number,
+	labelName: string
+): Promise<void> => {
 	try {
 		const { data: currentLabels } = await octokit.issues.listLabelsOnIssue({ owner, repo, issue_number });
 		const hasLabel = currentLabels.some((label) => label.name === labelName);
@@ -80,7 +90,7 @@ export const getPrDetails = async (
 	owner: string,
 	repo: string,
 	pull_number: number
-): Promise<{ headRef: string; commitMessages: string[]; baseRef: string; body: string } | null> => {
+): Promise<{ headRef: string; commitMessages: string[]; baseRef: string; body: string; merged: boolean } | null> => {
 	try {
 		const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number });
 		const commitMessages = await listPrCommitMessages(owner, repo, pull_number);
@@ -88,7 +98,8 @@ export const getPrDetails = async (
 			headRef: pr.head.ref,
 			commitMessages,
 			baseRef: pr.base.ref,
-			body: pr.body || ''
+			body: pr.body || '',
+			merged: pr.merged
 		};
 	} catch (error) {
 		console.error(`Failed to get PR details for #${pull_number}:`, error);
