@@ -9,6 +9,7 @@ import * as Github from './github';
 import * as Shortcut from './shortcut';
 import { isBranchProduction } from './helpers';
 import octokit from './octokit';
+import { prQueue } from './queue';
 
 export interface QAVerificationResult {
 	ready: boolean;
@@ -118,7 +119,7 @@ export const generateChangelogContent = async (
 	});
 };
 
-export const updatePrStoriesAndQaStatus = async (pr: {
+const _updatePrStoriesAndQaStatus = async (pr: {
 	owner: string;
 	repo: string;
 	number: number;
@@ -230,4 +231,13 @@ export const updatePrStoriesAndQaStatus = async (pr: {
 	}
 
 	return { ready: true, storyIds, notReady: [] };
+};
+
+export const updatePrStoriesAndQaStatus = async (pr: {
+	owner: string;
+	repo: string;
+	number: number;
+}): Promise<QAVerificationResult | void> => {
+	const key = `${pr.owner}/${pr.repo}/${pr.number}`;
+	return prQueue.add(key, () => _updatePrStoriesAndQaStatus(pr));
 };
