@@ -11,7 +11,13 @@ export interface ShortcutStory {
 	id: number;
 	name: string;
 	workflow_state_id: number;
+	owner_ids?: string[];
 }
+
+const getApiHeaders = (): HeadersInit => ({
+	'Content-Type': 'application/json',
+	'Shortcut-Token': process.env.CLUBHOUSE_API_TOKEN ?? ''
+});
 
 const getStoryUrl = (id: number): string =>
 	`https://api.app.shortcut.com/api/v3/stories/${id}?token=${process.env.CLUBHOUSE_API_TOKEN}`;
@@ -67,4 +73,25 @@ export const extractStoryIdsFromBranchAndMessages = (headRef: string, messages: 
 
 export const getStoryWebUrl = (id: number): string => {
 	return `https://app.shortcut.com/tattoodo/story/${id}`;
+};
+
+export const fetchMemberNames = async (): Promise<Map<string, string>> => {
+	const map = new Map<string, string>();
+	try {
+		const response = await fetch('https://api.app.shortcut.com/api/v3/members', {
+			headers: getApiHeaders()
+		});
+		if (!response.ok) {
+			console.error(`Failed to fetch members: ${response.status} ${response.statusText}`);
+			return map;
+		}
+		const members = (await response.json()) as Array<{ id: string; profile: { name?: string; display_name?: string } }>;
+		for (const m of members) {
+			const name = m.profile?.display_name ?? m.profile?.name ?? 'Unknown';
+			map.set(m.id, name);
+		}
+	} catch (error) {
+		console.error('Error fetching Shortcut members:', error);
+	}
+	return map;
 };
