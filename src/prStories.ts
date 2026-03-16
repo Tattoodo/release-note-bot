@@ -61,6 +61,7 @@ export interface ChangelogItem {
 	storyId: string;
 	storyUrl: string;
 	storyName: string;
+	ownerName?: string;
 	story: Shortcut.ShortcutStory;
 	isShipped: boolean;
 }
@@ -92,6 +93,7 @@ export const generateChangelogContent = async (
 		return [];
 	}
 
+	const memberNames = await Shortcut.fetchMemberNames();
 	const shippedStatuses = await Promise.all(validStories.map((story) => Github.isStoryAlreadyShipped(story.id)));
 
 	return validStories.map((story, index) => {
@@ -108,11 +110,16 @@ export const generateChangelogContent = async (
 			}
 		}
 
+		const ownerIds = story.owner_ids ?? [];
+		const ownerName =
+			ownerIds.length > 0 ? ownerIds.map((id) => memberNames.get(id) ?? 'Unknown').join(', ') : undefined;
+
 		return {
 			indicator,
 			storyId: `sc-${story.id}`,
 			storyUrl: Shortcut.getStoryWebUrl(story.id),
 			storyName: story.name,
+			ownerName,
 			story,
 			isShipped
 		};
@@ -173,7 +180,8 @@ const _updatePrStoriesAndQaStatus = async (pr: {
 			return [
 				item.indicator,
 				`<a href="${item.storyUrl}" target="_blank" rel="noopener noreferrer">${item.storyId}</a>:`,
-				item.storyName
+				item.storyName,
+				item.ownerName ? `(${item.ownerName})` : ''
 			]
 				.filter(Boolean)
 				.join(' ');
