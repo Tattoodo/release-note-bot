@@ -160,51 +160,52 @@ const _updatePrStoriesAndQaStatus = async (pr: {
 
 	const showMappingNotice = await hasMappingJsonChanged(owner, repo, prNumber);
 
+	let changeLogFormatted: string;
+	let shippedStoriesNotice: string | null = null;
+	let changelogContent: ChangelogItem[] = [];
+
 	if (storyIds.length === 0) {
 		console.log(`No Shortcut stories found in PR #${prNumber} in ${owner}/${repo}`);
+		const commitSubjects = commitMessages.map((m) => m.split('\n')[0].trim()).filter(Boolean);
+		changeLogFormatted = commitSubjects.join('\n');
+	} else {
+		console.log(`Found ${storyIds.length} story IDs in PR #${prNumber} in ${owner}/${repo}: ${storyIds.join(', ')}`);
 
-		const cleanedBody = stripGeneratedContent(currentBody || '');
-		if (cleanedBody !== (currentBody || '').trim()) {
-			await octokit.pulls.update({ owner, repo, pull_number: prNumber, body: cleanedBody });
+		changelogContent = await generateChangelogContent(owner, repo, prNumber);
+		changeLogFormatted = changelogContent
+			.map((item) => {
+				return [
+					item.indicator,
+					`<a href="${item.storyUrl}" target="_blank" rel="noopener noreferrer">${item.storyId}</a>:`,
+					item.storyName,
+					item.ownerName ? `(${item.ownerName})` : ''
+				]
+					.filter(Boolean)
+					.join(' ');
+			})
+			.join('\n');
+
+		if (changelogContent.length === 0) {
+			console.log(`No valid stories could be fetched for PR #${prNumber} in ${owner}/${repo}`);
+
+			if (isProduction) {
+				await Github.addLabelIfMissing(owner, repo, prNumber, Github.UNTESTED_LABEL);
+			}
+
+			return { ready: false, storyIds, notReady: storyIds };
 		}
 
-		await Github.removeLabelIfPresent(owner, repo, prNumber, Github.UNTESTED_LABEL);
-		return { ready: true, storyIds: [], notReady: [] };
+		const shippedStories = changelogContent.filter((item) => item.isShipped);
+		shippedStoriesNotice =
+			shippedStories.length > 0
+				? shippedStoriesNoticePrefix +
+				  shippedStories.map((item) => item.storyId).join(', ') +
+				  shippedStoriesNoticeSuffix
+				: null;
 	}
 
-	console.log(`Found ${storyIds.length} story IDs in PR #${prNumber} in ${owner}/${repo}: ${storyIds.join(', ')}`);
-
-	const changelogContent = await generateChangelogContent(owner, repo, prNumber);
-	const changeLogFormatted = changelogContent
-		.map((item) => {
-			return [
-				item.indicator,
-				`<a href="${item.storyUrl}" target="_blank" rel="noopener noreferrer">${item.storyId}</a>:`,
-				item.storyName,
-				item.ownerName ? `(${item.ownerName})` : ''
-			]
-				.filter(Boolean)
-				.join(' ');
-		})
-		.join('\n');
-
-	if (changelogContent.length === 0) {
-		console.log(`No valid stories could be fetched for PR #${prNumber} in ${owner}/${repo}`);
-
-		if (isProduction) {
-			await Github.addLabelIfMissing(owner, repo, prNumber, Github.UNTESTED_LABEL);
-		}
-
-		return { ready: false, storyIds, notReady: storyIds };
-	}
-
-	const shippedStories = changelogContent.filter((item) => item.isShipped);
-	const shippedStoriesNotice =
-		shippedStories.length > 0
-			? shippedStoriesNoticePrefix + shippedStories.map((item) => item.storyId).join(', ') + shippedStoriesNoticeSuffix
-			: null;
-
-	const wrappedChangelog = [changelogStartMarker, changeLogFormatted, changelogEndMarker].join('\n');
+	const wrappedChangelog =
+		changeLogFormatted.length > 0 ? [changelogStartMarker, changeLogFormatted, changelogEndMarker].join('\n') : null;
 	const bodyParts = [
 		shippedStoriesNotice,
 		wrappedChangelog,
@@ -215,6 +216,11 @@ const _updatePrStoriesAndQaStatus = async (pr: {
 		.join('\n\n');
 
 	await octokit.pulls.update({ owner, repo, pull_number: prNumber, body: bodyParts });
+
+	if (storyIds.length === 0) {
+		await Github.removeLabelIfPresent(owner, repo, prNumber, Github.UNTESTED_LABEL);
+		return { ready: true, storyIds: [], notReady: [] };
+	}
 
 	if (isProduction) {
 		const notReadyStories = changelogContent.filter(
