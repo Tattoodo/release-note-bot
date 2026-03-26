@@ -25,7 +25,7 @@ const targets: Target[] = [
 			patch: 'release-patch',
 		},
 		path: 'Tattoodo.xcodeproj/project.pbxproj',
-		tagPrefix: '',
+		tagPrefix: 'client-app-',
 	},
 	{
 		labels: {
@@ -34,7 +34,7 @@ const targets: Target[] = [
 			patch: 'release-books-patch',
 		},
 		path: 'tattoodo-books.xcodeproj/project.pbxproj',
-		tagPrefix: 'books-',
+		tagPrefix: 'business-app-',
 	},
 ];
 
@@ -148,7 +148,7 @@ export const run = async (payload: PullRequestEvent): Promise<string | void> => 
 			owner,
 			repo,
 			path: target.path,
-			message: `chore: bump ${target.tagPrefix ? 'books ' : ''}version to ${newVersion}`,
+			message: `chore: bump ${target.tagPrefix}${newVersion}`,
 			content: Buffer.from(updatedContent).toString('base64'),
 			sha: data.sha,
 			branch,
