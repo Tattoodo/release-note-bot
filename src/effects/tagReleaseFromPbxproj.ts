@@ -20,18 +20,18 @@ type Target = {
 const targets: Target[] = [
 	{
 		labels: {
-			major: 'release-major',
-			minor: 'release-minor',
-			patch: 'release-patch',
+			major: 'release-client-major',
+			minor: 'release-client-minor',
+			patch: 'release-client-patch',
 		},
 		path: 'Tattoodo.xcodeproj/project.pbxproj',
 		tagPrefix: 'client-app-',
 	},
 	{
 		labels: {
-			major: 'release-books-major',
-			minor: 'release-books-minor',
-			patch: 'release-books-patch',
+			major: 'release-business-major',
+			minor: 'release-business-minor',
+			patch: 'release-business-patch',
 		},
 		path: 'tattoodo-books.xcodeproj/project.pbxproj',
 		tagPrefix: 'business-app-',
