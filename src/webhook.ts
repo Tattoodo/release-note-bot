@@ -5,6 +5,7 @@ import * as TagRelease from './effects/tagRelease';
 import * as NotifyDeploymentInSlack from './effects/notifyDeploymentInSlack';
 import * as TagReleaseFromGradleFileEffect from './effects/tagReleaseFromGradleFile';
 import * as UpdatePrStories from './effects/updatePrStories';
+import * as TagReleaseFromPbxprojEffect from './effects/tagReleaseFromPbxproj';
 import * as ResyncReleaseNotes from './effects/resyncReleaseNotes';
 
 const response = (message: string | string[], statusCode = 200): APIGatewayProxyResult => ({
@@ -17,6 +18,7 @@ const effects: WebhookEffect[] = [
 	TagRelease,
 	NotifyDeploymentInSlack,
 	TagReleaseFromGradleFileEffect,
+	TagReleaseFromPbxprojEffect,
 	UpdatePrStories,
 	ResyncReleaseNotes
 ];
