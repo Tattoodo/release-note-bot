@@ -1,6 +1,7 @@
 /**
- * This release effect bumps MARKETING_VERSION in Xcode pbxproj files
- * and creates a GitHub release tag when a release PR is merged into main.
+ * This release effect reads the current version from the latest GitHub release tag,
+ * bumps it, writes the new MARKETING_VERSION back to the Xcode pbxproj file,
+ * and creates a new GitHub release tag.
  * Supports both the main Tattoodo app and the Books (business) app.
  **/
 
@@ -37,6 +38,8 @@ const targets: Target[] = [
 	},
 ];
 
+const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
+
 const bumpVersion = (current: string, key: BumpKey): string => {
 	const [major, minor, patch] = current.split('.').map(Number);
 	if (key === 'major') return `${major + 1}.0.0`;
@@ -51,6 +54,27 @@ const getKeyToBump = (
 	if (prLabels.includes(targetLabels.major)) return 'major';
 	if (prLabels.includes(targetLabels.minor)) return 'minor';
 	if (prLabels.includes(targetLabels.patch)) return 'patch';
+	return null;
+};
+
+const getLatestVersionFromReleases = async (
+	owner: string,
+	repo: string,
+	tagPrefix: string
+): Promise<string | null> => {
+	const releases = await octokit.repos.listReleases({ owner, repo, per_page: 100 });
+
+	for (const release of releases.data) {
+		const tag = release.tag_name;
+		if (tagPrefix) {
+			if (!tag.startsWith(tagPrefix)) continue;
+			const version = tag.slice(tagPrefix.length);
+			if (VERSION_REGEX.test(version)) return version;
+		} else {
+			if (VERSION_REGEX.test(tag)) return tag;
+		}
+	}
+
 	return null;
 };
 
@@ -95,6 +119,13 @@ export const run = async (payload: PullRequestEvent): Promise<string | void> => 
 			continue;
 		}
 
+		const currentVersion = await getLatestVersionFromReleases(owner, repo, target.tagPrefix);
+		if (!currentVersion) {
+			return `tagReleaseFromPbxproj: no existing release found for prefix '${target.tagPrefix}'`;
+		}
+
+		const newVersion = bumpVersion(currentVersion, keyToBump);
+
 		const { data } = await octokit.repos.getContent({
 			owner,
 			repo,
@@ -107,18 +138,6 @@ export const run = async (payload: PullRequestEvent): Promise<string | void> => 
 		}
 
 		const originalContent = Buffer.from(data.content, 'base64').toString();
-		const versionMatch = originalContent.match(/MARKETING_VERSION = (\d+\.\d+\.\d+);/);
-
-		if (!versionMatch) {
-			return `tagReleaseFromPbxproj: MARKETING_VERSION not found in ${target.path}`;
-		}
-
-		const currentVersion = versionMatch[1];
-		if (!/^\d+\.\d+\.\d+$/.test(currentVersion)) {
-			return `tagReleaseFromPbxproj: MARKETING_VERSION is not in MAJOR.MINOR.PATCH format in ${target.path}`;
-		}
-
-		const newVersion = bumpVersion(currentVersion, keyToBump);
 
 		const updatedContent = originalContent.replaceAll(
 			`MARKETING_VERSION = ${currentVersion};`,
