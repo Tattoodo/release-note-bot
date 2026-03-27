@@ -15,7 +15,7 @@ export const targets: Target[] = [
 			minor: 'release-client-minor',
 			patch: 'release-client-patch',
 		},
-		path: 'Tattoodo.xcodeproj/project.pbxproj',
+		path: 'PRODUCTION_VERSIONS',
 		tagPrefix: 'client-app-',
 	},
 	{
@@ -24,14 +24,17 @@ export const targets: Target[] = [
 			minor: 'release-business-minor',
 			patch: 'release-business-patch',
 		},
-		path: 'tattoodo-books.xcodeproj/project.pbxproj',
+		path: 'PRODUCTION_VERSIONS',
 		tagPrefix: 'business-app-',
 	},
 ];
 
 export const VERSION_REGEX = /^\d+\.\d+\.\d+$/;
 
-export const MARKETING_VERSION_REGEX = /MARKETING_VERSION = \d+\.\d+\.\d+;/g;
+export const PRODUCTION_VERSIONS_KEY: Record<string, string> = {
+	'client-app-': 'client-app',
+	'business-app-': 'business-app',
+};
 
 export const bumpVersion = (current: string, key: BumpKey): string => {
 	const [major, minor, patch] = current.split('.').map(Number);
