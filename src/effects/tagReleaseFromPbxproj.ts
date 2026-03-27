@@ -104,7 +104,6 @@ export const run = async (payload: PullRequestEvent): Promise<string | void> => 
 	const prLabels = payload.pull_request.labels.map((label) => label.name);
 	const owner = payload.organization.login;
 	const repo = payload.repository.name;
-	const branch = payload.pull_request.base.ref;
 
 	const hasAnyLabel = targets.some((target) => getKeyToBump(prLabels, target.labels) !== null);
 	if (!hasAnyLabel) {
@@ -126,34 +125,6 @@ export const run = async (payload: PullRequestEvent): Promise<string | void> => 
 
 		const newVersion = bumpVersion(currentVersion, keyToBump);
 
-		const { data } = await octokit.repos.getContent({
-			owner,
-			repo,
-			ref: branch,
-			path: target.path,
-		});
-
-		if (!('type' in data) || data.type !== 'file') {
-			continue;
-		}
-
-		const originalContent = Buffer.from(data.content, 'base64').toString();
-
-		const updatedContent = originalContent.replaceAll(
-			`MARKETING_VERSION = ${currentVersion};`,
-			`MARKETING_VERSION = ${newVersion};`
-		);
-
-		await octokit.repos.createOrUpdateFileContents({
-			owner,
-			repo,
-			path: target.path,
-			message: `chore: bump ${target.tagPrefix}${newVersion}`,
-			content: Buffer.from(updatedContent).toString('base64'),
-			sha: data.sha,
-			branch,
-		});
-
 		await octokit.repos.createRelease({
 			owner,
 			repo,
@@ -161,7 +132,7 @@ export const run = async (payload: PullRequestEvent): Promise<string | void> => 
 			name: `${target.tagPrefix}${newVersion}`,
 			body: payload.pull_request.body,
 			make_latest: 'true',
-			target_commitish: branch,
+			target_commitish: payload.pull_request.merge_commit_sha,
 		});
 
 		results.push(`${target.tagPrefix}${newVersion}`);
