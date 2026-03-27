@@ -7,7 +7,15 @@ import { isPullRequest, isRegularRelease } from '../helpers';
 import { PullRequestEvent } from '../types';
 import { updatePrTitle } from '../prTitle';
 
-const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web', 'image-lambda', 'proxy-lambda', 'socket-node', 'app-ios'];
+const enabledForRepos = [
+	'api-node-nest',
+	'backend-api',
+	'tattoodo-web',
+	'image-lambda',
+	'proxy-lambda',
+	'socket-node',
+	'app-ios'
+];
 const changelogTriggerActions = ['opened'];
 
 export const name = 'renameTitle';

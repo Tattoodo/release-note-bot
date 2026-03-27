@@ -24,7 +24,10 @@ export const shouldRun = async (payload: GithubEvent): Promise<boolean> => {
 	const { action, pull_request, repository } = payload;
 	const branchName = pull_request.base.ref;
 
-	if (verifyQAStatusTriggerActions.includes(action) && (isBranchProduction(branchName) || isBranchStaging(branchName))) {
+	if (
+		verifyQAStatusTriggerActions.includes(action) &&
+		(isBranchProduction(branchName) || isBranchStaging(branchName))
+	) {
 		return true;
 	}
 
@@ -38,9 +41,7 @@ export const shouldRun = async (payload: GithubEvent): Promise<boolean> => {
 const RELEASE_LABEL_WARNING_START = '<!-- release-label-warning-start -->';
 const RELEASE_LABEL_WARNING_END = '<!-- release-label-warning-end -->';
 const RELEASE_LABEL_WARNING = `${RELEASE_LABEL_WARNING_START}\n> ⚠️ **No release label detected.** This PR will not trigger a version bump or release when merged. Add a release label (e.g. \`release-client-minor\`, \`release-business-patch\`) if a release is intended.\n${RELEASE_LABEL_WARNING_END}`;
-const releaseWarningRe = new RegExp(
-	`${RELEASE_LABEL_WARNING_START}[\\s\\S]*?${RELEASE_LABEL_WARNING_END}\\n*`
-);
+const releaseWarningRe = new RegExp(`${RELEASE_LABEL_WARNING_START}[\\s\\S]*?${RELEASE_LABEL_WARNING_END}\\n*`);
 
 const IOS_RELEASE_LABELS = [
 	'release-client-major',
@@ -48,7 +49,7 @@ const IOS_RELEASE_LABELS = [
 	'release-client-patch',
 	'release-business-major',
 	'release-business-minor',
-	'release-business-patch',
+	'release-business-patch'
 ];
 
 const updateReleaseLabelWarning = async (payload: PullRequestEvent): Promise<void> => {
@@ -71,14 +72,14 @@ const updateReleaseLabelWarning = async (payload: PullRequestEvent): Promise<voi
 			owner,
 			repo,
 			pull_number: number,
-			body: `${RELEASE_LABEL_WARNING}\n\n${body}`,
+			body: `${RELEASE_LABEL_WARNING}\n\n${body}`
 		});
 	} else if (hasReleaseLabel && hasWarning) {
 		await octokit.pulls.update({
 			owner,
 			repo,
 			pull_number: number,
-			body: body.replace(releaseWarningRe, '').trim(),
+			body: body.replace(releaseWarningRe, '').trim()
 		});
 	}
 };

@@ -14,7 +14,15 @@ export const name = 'resyncReleaseNotes';
 
 const RESYNC_LABEL = 'resync-notes';
 
-const enabledForRepos = ['api-node-nest', 'backend-api', 'tattoodo-web', 'image-lambda', 'proxy-lambda', 'socket-node', 'app-ios'];
+const enabledForRepos = [
+	'api-node-nest',
+	'backend-api',
+	'tattoodo-web',
+	'image-lambda',
+	'proxy-lambda',
+	'socket-node',
+	'app-ios'
+];
 
 export const shouldRun = async (payload: GithubEvent): Promise<boolean> => {
 	if (!isPullRequest(payload)) {

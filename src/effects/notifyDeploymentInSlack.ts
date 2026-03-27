@@ -27,8 +27,8 @@ export const run = async (payload: PushEvent): Promise<string> => {
 	const webhookUrl = isProductionRelease
 		? process.env.RELEASE_SLACK_WEBHOOK_URL_PRODUCTION
 		: isStagingRelease
-		? process.env.RELEASE_SLACK_WEBHOOK_URL_STAGING
-		: null;
+			? process.env.RELEASE_SLACK_WEBHOOK_URL_STAGING
+			: null;
 
 	if (!webhookUrl) {
 		return 'notifyDeployment: no webhook url found';
