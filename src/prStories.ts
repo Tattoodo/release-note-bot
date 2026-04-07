@@ -172,18 +172,30 @@ const _updatePrStoriesAndQaStatus = async (pr: {
 		console.log(`Found ${storyIds.length} story IDs in PR #${prNumber} in ${owner}/${repo}: ${storyIds.join(', ')}`);
 
 		changelogContent = await generateChangelogContent(owner, repo, prNumber);
-		changeLogFormatted = changelogContent
-			.map((item) => {
-				return [
-					item.indicator,
-					`<a href="${item.storyUrl}" target="_blank" rel="noopener noreferrer">${item.storyId}</a>:`,
-					item.storyName,
-					item.ownerName ? `(${item.ownerName})` : ''
-				]
-					.filter(Boolean)
-					.join(' ');
-			})
-			.join('\n');
+
+		const itemsByAuthor = new Map<string, ChangelogItem[]>();
+		for (const item of changelogContent) {
+			const authors = item.ownerName ? item.ownerName.split(', ') : ['Unassigned'];
+			for (const author of authors) {
+				const list = itemsByAuthor.get(author) ?? [];
+				list.push(item);
+				itemsByAuthor.set(author, list);
+			}
+		}
+
+		const formatItem = (item: ChangelogItem) =>
+			[
+				item.indicator,
+				`<a href="${item.storyUrl}" target="_blank" rel="noopener noreferrer">${item.storyId}</a>:`,
+				item.storyName
+			]
+				.filter(Boolean)
+				.join(' ');
+
+		changeLogFormatted = Array.from(itemsByAuthor.keys())
+			.sort((a, b) => a.localeCompare(b))
+			.map((author) => [`**${author}**`, ...itemsByAuthor.get(author)!.map(formatItem)].join('\n'))
+			.join('\n\n');
 
 		if (changelogContent.length === 0) {
 			console.log(`No valid stories could be fetched for PR #${prNumber} in ${owner}/${repo}`);
