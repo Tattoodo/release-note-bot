@@ -131,6 +131,7 @@ const _updatePrStoriesAndQaStatus = async (pr: {
 	repo: string;
 	number: number;
 }): Promise<QAVerificationResult> => {
+	const startTime = Date.now();
 	const { owner, repo, number: prNumber } = pr;
 
 	await Github.ensureLabelExists(
@@ -216,8 +217,13 @@ const _updatePrStoriesAndQaStatus = async (pr: {
 				: null;
 	}
 
+	const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
+	const elapsedLine = `\n\n_Changelog generated in ${elapsedSeconds}s_`;
+
 	const wrappedChangelog =
-		changeLogFormatted.length > 0 ? [changelogStartMarker, changeLogFormatted, changelogEndMarker].join('\n') : null;
+		changeLogFormatted.length > 0
+			? [changelogStartMarker, changeLogFormatted + elapsedLine, changelogEndMarker].join('\n')
+			: null;
 	const bodyParts = [
 		shippedStoriesNotice,
 		wrappedChangelog,
